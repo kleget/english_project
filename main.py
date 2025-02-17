@@ -1,16 +1,22 @@
-# This is a sample Python script.
+import time
+from io import BytesIO
+from pdfreader import PDFDocument, SimplePDFViewer
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+start_time = time.time()
+
+analusys = {}
+
+with open('numpy.pdf', "rb") as f:
+    stream = BytesIO(f.read())
+    doc = PDFDocument(stream)
+    all_pages = len([p for p in doc.pages()])
+    for i in range(1, all_pages+1):
+        viewer = SimplePDFViewer(f)
+        viewer.navigate(i)
+        viewer.render()
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+end_time = time.time()  # время окончания выполнения
+execution_time = end_time - start_time  # вычисляем время выполнения
 
-
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+print(f"Время выполнения программы: {execution_time} секунд")
