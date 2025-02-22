@@ -1,3 +1,12 @@
+# user_0 = {
+#     'username': 'efermi',
+#     'first': 'enrico',
+#     'last': 'fermi',
+#     }
+#
+# for key, value in user_0.items():
+#     print("Key: " + key)
+#     print("Value: " + value + "\n")
 import time
 from io import BytesIO
 from pdfreader import PDFDocument, SimplePDFViewer
@@ -9,7 +18,7 @@ with open('math_in_machine_learning.pdf', "rb") as f:
     stream = BytesIO(f.read())
     doc = PDFDocument(stream)
     all_pages = len([p for p in doc.pages()])
-    for i in range(1, all_pages+1):  # перебираем все страницы файла
+    for i in range(1, 3):  # перебираем все страницы файла
         viewer = SimplePDFViewer(f)
         viewer.navigate(i)
         viewer.render()
@@ -22,9 +31,9 @@ with open('math_in_machine_learning.pdf', "rb") as f:
                 analusys[text[x]] += 1
 
 with open('answer.txt', 'w', encoding="utf-8") as answ_f:
-    sorted_analusys = sorted(analusys.items(), key=lambda item: item[1], reverse=True)
-    for t in sorted_analusys:
-        answ_f.write(f"{t[0]}: {t[1]}\n")
+    # sorted_analusys = sorted(analusys.items(), key=lambda item: item[1], reverse=True)
+    # for t in sorted_analusys:
+    answ_f.write(str(analusys))
 
 
 
