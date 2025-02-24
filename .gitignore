@@ -1,3 +1,5 @@
 .venv
 *.pdf
 *.txt
+poligon.py
+__pycache__/
