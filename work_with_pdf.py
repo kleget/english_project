@@ -2,7 +2,7 @@ import time
 from io import BytesIO
 from pdfreader import PDFDocument, SimplePDFViewer
 
-def pdf_to_txt(file):
+def slowly_alg(file):
 
     analusys = {}
     with open('math_in_machine_learning.pdf', "rb") as f:
