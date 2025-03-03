@@ -84,6 +84,7 @@ def analysand_func_list(name_file):  # возвращает список сло�
             analysand.append(text[x])
     return analysand
 
+
 def levenstein(str_1, str_2):
     n, m = len(str_1), len(str_2)
     if n > m:

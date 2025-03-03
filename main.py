@@ -1,20 +1,42 @@
 from io import BytesIO
 from pdfreader import PDFDocument, SimplePDFViewer
-from pdf_to_txt import *
-from work_with_text import *
-
+from file_processing import *
+from text_analysis import *
+import os
 import time
+
+
+rootdir = 'D:/code/english_project/book'
+
 
 # начальное время
 start_time = time.time()
-def main(list_files_names):
-    # тут мы все pdf делаем текстовыми
+
+
+def main(rootdir):
+
+    rename_files_in_directory(rootdir)
+
+    for root, dirs, files in os.walk(rootdir):
+        if files:  # Если в папке есть файлы
+            root = root.replace('\\', '/')# Выводим путь к папке
+            print(root)
+            for file in files:
+                if '/txt/' not in root:
+                    pdf_to_txt(root, file)
+
+    structure = get_directory_structure(rootdir)
+    all_folders = get_all_folders(structure)
+    for x in all_folders: # работает только для вложенности 2: pdf/basic
+        if '/' in x:
+            x = x.split('/')
+            print(structure[x[0]][x[1]]['files'])
     # for x in range(len(list_files_names)):
     #     pdf_to_txt(list_files_names[x])
 
     # for x in range(len(list_files_names)):
-    A = analysand_func_dict(list_files_names[0])
-    B = analysand_func_dict(list_files_names[1])
+    A = analysand_func_dict(rootdir)
+    B = analysand_func_dict(rootdir)
 
     math_word = {}
     for x in B:  # тут мы проверяем, чтобы в math_word попали только те слова, которых нет в обычной книге
@@ -47,7 +69,8 @@ def main(list_files_names):
 
     print(len(sorted_analysand))
 
-main(['voina-i-mir', 'math_in_machine_learning'])
+
+main(rootdir)
 # конечное время
 end_time = time.time()
 
