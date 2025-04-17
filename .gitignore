@@ -3,7 +3,6 @@
 *.pdf
 *.txt
 *.db
-poligon.py
 __pycache__/
 tasks.py
 book
