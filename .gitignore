@@ -4,6 +4,6 @@
 *.txt
 *.db
 __pycache__/
-tasks.py
-book
+book/
 test.py
+database/

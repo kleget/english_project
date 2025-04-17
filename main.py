@@ -87,5 +87,4 @@ end_time = time.time()
 # разница между конечным и начальным временем
 elapsed_time = end_time - start_time
 print('Elapsed time: ', elapsed_time)
-print('for test')
 
