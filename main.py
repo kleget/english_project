@@ -24,6 +24,8 @@ def print_all_files_from_rootdir():
             list_all_files_from_rootdir.append(structure[x[0]][x[1]]['files'])
     return list_all_files_from_rootdir
 
+
+
 def main(rootdir):
     # тут мы просто делаем все имена книг чистыми без мусора(пробегается только по /pdf/)
     rename_files_in_directory(rootdir)
@@ -42,7 +44,7 @@ def main(rootdir):
     #     pdf_to_txt(list_files_names[x])
 
     # for x in range(len(list_files_names)):
-    A = analysand_func_dict(rootdir)
+    A = analysand_func_dict(rootdir) # сюда нужно файл передавать конкретный из txt уже
     B = analysand_func_dict(rootdir)
 
     math_word = {}
@@ -52,6 +54,7 @@ def main(rootdir):
     sorted_analysand = sorted(math_word.items(), key=lambda item: item[1], reverse=True)
     sorted_analysand = [list(item) for item in sorted_analysand]
 
+    # тут мы в файл записываем все, что мы удалили, весь мусор, просто на всякий случай, и так-же применяем расстояние Левеншейна
     with open('answer_deleting.txt', 'w', encoding='UTF-8') as ans_d:
         e = 0
         g = 1
