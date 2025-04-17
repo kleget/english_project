@@ -1,11 +1,11 @@
 from lemmatize import *
+from config import *
 
-chars = r"""!"#$%&'()*+-,./:;<=>?@[\]^_`{|}~×–…“”«»—"""
 
 
-def removing_anomaly(mas):
-    mas = lemmatize_text_en(lemmatize_text_ru(mas))
-    mas = mas.split()  # удаляем аномалии из текста
+def removing_anomaly(mas):  # куча всяких обработок, просто чистим данные полученные из книг
+    mas = lemmatize_text_en(lemmatize_text_ru(mas))  # удаляем аномалии из текста
+    mas = mas.split()
     for x in range(len(mas)):  # тут мы вставляем пробелы по бокам каждого символа кроме букв
         e = set(mas[x]) & set(chars)
         e = list(e)
@@ -51,12 +51,12 @@ def removing_anomaly(mas):
     return ' '.join(mas).split(' ')
 
 
-def multiple_replace(tekst, zamena):  # не помню зачем
-    pattern = re.compile("|".join(sorted((re.escape(k) for k in zamena), key=len, reverse=True)), re.DOTALL)
-    return pattern.sub(lambda m: zamena[m.group(0)], tekst)
+# def multiple_replace(tekst, zamena):  # не помню зачем
+#     pattern = re.compile("|".join(sorted((re.escape(k) for k in zamena), key=len, reverse=True)), re.DOTALL)
+#     return pattern.sub(lambda m: zamena[m.group(0)], tekst)
 
 
-def get_file(name_file):  # вынес открытие и чтение файла, чтобы в функциях не повторяться
+def get_txt_file(name_file):  # вынес открытие и чтение файла, чтобы в функциях не повторяться
     with open(f'book/txt/{name_file}.txt', 'r', encoding='utf-8') as file:
         f = file.read()
         f = f.lower()
@@ -66,7 +66,7 @@ def get_file(name_file):  # вынес открытие и чтение файл
 
 def analysand_func_dict(name_file):  # возвращает список слов в виде словаря
     analysand = {}
-    text = get_file(name_file)
+    text = get_txt_file(name_file)
     for x in range(len(text)):  # перебираем все слова текущей страницы
         if text[x] not in analysand:
             analysand[text[x]] = 1
@@ -78,14 +78,14 @@ def analysand_func_dict(name_file):  # возвращает список сло�
 
 def analysand_func_list(name_file):  # возвращает список слов в виде списка
     analysand = []
-    text = get_file(name_file)
+    text = get_txt_file(name_file)
     for x in range(len(text)):  # перебираем все слова текущей страницы
         if text[x] not in analysand:
             analysand.append(text[x])
     return analysand
 
 
-def levenstein(str_1, str_2):
+def levenstein(str_1, str_2):  # расстояние Левенштейна для чистки данных
     n, m = len(str_1), len(str_2)
     if n > m:
         str_1, str_2 = str_2, str_1

@@ -4,19 +4,31 @@ from file_processing import *
 from text_analysis import *
 import os
 import time
+from config import *
 
-
-rootdir = 'D:/code/english_project/book'
 
 
 # начальное время
 start_time = time.time()
 
+def print_all_files_from_rootdir():
+    # я не знаю, смысла в этом нет, функция создана просто чтобы можно было вывести структуру
+    structure = get_directory_structure(rootdir)
+    all_folders = get_all_folders(structure)
+
+    list_all_files_from_rootdir = []
+
+    for x in all_folders:  # работает только для вложенности 2: pdf/basic
+        if '/' in x:
+            x = x.split('/')
+            list_all_files_from_rootdir.append(structure[x[0]][x[1]]['files'])
+    return list_all_files_from_rootdir
 
 def main(rootdir):
-
+    # тут мы просто делаем все имена книг чистыми без мусора(пробегается только по /pdf/)
     rename_files_in_directory(rootdir)
 
+    # перебираем все дерево файлов rootdir и все файлы .pdf конвертируем в .txt с помощью pdf_to_txt()
     for root, dirs, files in os.walk(rootdir):
         if files:  # Если в папке есть файлы
             root = root.replace('\\', '/')# Выводим путь к папке
@@ -25,12 +37,7 @@ def main(rootdir):
                 if '/txt/' not in root:
                     pdf_to_txt(root, file)
 
-    structure = get_directory_structure(rootdir)
-    all_folders = get_all_folders(structure)
-    for x in all_folders: # работает только для вложенности 2: pdf/basic
-        if '/' in x:
-            x = x.split('/')
-            print(structure[x[0]][x[1]]['files'])
+    list_all_files = print_all_files_from_rootdir()  #
     # for x in range(len(list_files_names)):
     #     pdf_to_txt(list_files_names[x])
 

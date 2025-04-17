@@ -1,8 +1,9 @@
+import pdfminer
 import pdfminer.high_level
 import os
 
 
-def pdf_to_txt(root, name_file):  # конвертируем pdf в txt и по факту копируем /pdf в /txt только с новыми файлами
+def pdf_to_txt(root, name_file):  # конвертируем .pdf в .txt и по факту копируем /pdf/ в /txt/ только с конвертированными файлами
     with open(f'{root}/{name_file}', 'rb') as file:
         root = root.replace('/pdf/', '/txt/')
         name_file = name_file.split('.')[0]
@@ -17,7 +18,7 @@ def rename_files_in_directory(directory):  # удаляем весь мусор 
     for root, dirs, files in os.walk(directory):
         for filename in files:
             if ('.' in filename) and (filename.count('.') > 1):
-                new_filename = filename.replace('.', '_').replace(' ', '_').replace(',', '_')
+                new_filename = filename.replace('.', '_').replace(' ', '_').replace(',', '_').replace('__', '_').replace('___', '_')
                 new_filename = new_filename.replace('_pdf', '.pdf')
                 old_file = os.path.join(root, filename)
                 new_file = os.path.join(root, new_filename).replace('\\', '/')
@@ -30,10 +31,10 @@ def get_directory_structure(rootdir):  # получаем всю структу�
     for item in os.listdir(rootdir):
         path = os.path.join(rootdir, item)
         if os.path.isdir(path):
-            # Если это папка, рекурсивно получаем её структуру
+            # Если это папка, то рекурсивно получаем её структуру
             structure[item] = get_directory_structure(path)
         else:
-            # Если это файл, добавляем его в список
+            # Если это файл, то добавляем его в список
             if 'files' not in structure:
                 structure['files'] = []
             structure['files'].append(item)
@@ -41,6 +42,8 @@ def get_directory_structure(rootdir):  # получаем всю структу�
 
 
 def get_all_folders(structure, current_path=""):  # нужно для навигации по structure возвращаемой get_directory_structure
+    # получаем все папки из structure в виде списка
+    # пример: ['pdf', 'pdf/math', 'pdf/basic', 'pdf/code', 'txt', 'txt/math', 'txt/basic', 'txt/code']
     folders = []
     for key, value in structure.items():
         if key != 'files':  # Игнорируем ключ 'files'
