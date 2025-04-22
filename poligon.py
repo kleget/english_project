@@ -48,7 +48,7 @@
 # # print(all_files)
 
 from file_processing import get_directory_structure, get_all_folders
-from text_analysis import analysand_func_dict
+from text_analysis import *
 from config import *
 import sqlite3 as sq
 import re
@@ -94,7 +94,24 @@ def reqursion(x):
                 sorted_analysand = sorted(math_word.items(), key=lambda item: item[1], reverse=True)
                 sorted_analysand = [list(item) for item in sorted_analysand] # из хуйни в список списков
                 # for i in sorted_analysand:
-                insert_many_into_table(*x_y.split('/'), sorted_analysand)
+                # тут мы в файл записываем все, что мы удалили, весь мусор, просто на всякий случай, и так-же применяем расстояние Левеншейна
+                # with open('answer_deleting.txt', 'w', encoding='UTF-8') as ans_d:
+                e = 0
+                g = 1
+                dict_del = {}
+                while e in range(len(sorted_analysand) - 1):
+                    while g in range(len(sorted_analysand) - 1):
+                        if (levenstein(sorted_analysand[e][0], sorted_analysand[g][0]) <= 2) and (
+                                (len(sorted_analysand[e][0]) >= 4) and (len(sorted_analysand[g][0]) >= 4)):
+                            sorted_analysand[e][1] += sorted_analysand[g][1]
+                            dict_del[sorted_analysand[g][0]] = sorted_analysand[g][1]
+                            del sorted_analysand[g]
+                        else:
+                            g += 1
+                    e += 1
+                    g = e + 1
+                insert_many_into_table('delete', 'all', dict_del)
+                insert_many_into_table(*x_y.split('/'), sorted_analysand) # тут записываем окончательный набор данных в БД
 
 
 reqursion(list_all_files)

@@ -67,6 +67,7 @@ def get_txt_file(name_file):  # вынес открытие и чтение фа
 def analysand_func_dict(name_file):  # возвращает список слов в виде словаря
     analysand = {}
     text = get_txt_file(name_file)
+    #TODO: при большом объеме данных(война и мир)грузит очень долго, секунд 70
     for x in range(len(text)):  # перебираем все слова текущей страницы
         if text[x] not in analysand:
             analysand[text[x]] = 1
