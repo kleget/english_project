@@ -107,28 +107,80 @@ def reqursion(x):
 
                 # 4. Поиск и объединение похожих строк
                 processed = set()
-                for l in list(length_groups.keys()): 
+                maxi = 0 
+                # это максимальный элемент из всех вложенных списков length_groups, чтоыбы не вносить лишнее в processed
+                for m in length_groups:
+                    if length_groups[m][-1] > maxi:
+                        maxi = length_groups[m][-1]
+
+                
+                # чтобы он не проверял все одинаковые элементы, я из сразу внесу как проверенные, такак это ни на что не влияет
+                for i in range(maxi+1):
+                    processed.add((i, i))
+                
+
+                MIN_COMMON_RATIO = 0.6  # 60% совпадение символов
+
+                for l in list(length_groups.keys()):
                     for dl in (0, 1, 2):
                         current_l = l + dl
                         if current_l not in length_groups:
                             continue
-                        # current_l - это нужно для того, чтобы не сравнивать все элеметны со всеми, потому что levenshtain занимает много времени. 
-                        # ведь логично, что слова 'hello' и 'hi' нет смысла сравнивать, так как их длинна отличается на на 3, а мы рассматриваем только ( |len(a)-(len(b))| <= 2 )
-                        # поэтому мы берем длину слова hello(5) и сравниваем это слова только со словами, длинна которых 5, 6, 7
-                        # так мы сильно сократим кол-во проверок levenshtain
-                        # idx1 - это значение элемента l из length_groups
-                        # idx2 - это значение элемента current_l из length_groups
+                            
                         for idx1 in length_groups[l]:
                             s1 = sorted_analysand[idx1][0]
                             for idx2 in length_groups[current_l]:
                                 if idx2 <= idx1 or (idx1, idx2) in processed:
                                     continue
-
+                                
                                 processed.add((idx1, idx2))
                                 s2 = sorted_analysand[idx2][0]
+                                
+                                # Фильтр 1: Проверка общего количества символов
+                                common = len(set(s1) & set(s2))
+                                if common / max(len(s1), len(s2)) < MIN_COMMON_RATIO:
+                                    continue
+                                
+                                # Фильтр 2: Максимальная разница длин
+                                if abs(len(s1) - len(s2)) > 2:
+                                    continue
+                                
+                                # Фильтр 3: Первые 3 символа должны совпадать
+                                if s1[:3] != s2[:3]:
+                                    continue
+                                
+                                log_file = open("merge_errors.log", "w")
 
                                 if Levenshtein.distance(s1, s2) <= 2:
+                                    # Проверка на явно не связанные слова
+                                    if abs(len(s1) - len(s2)) > 2 or s1[:3] != s2[:3]:
+                                        log_file.write(f"UNEXPECTED MERGE: {s1} ({len(s1)}) <- {s2} ({len(s2)}), dist={Levenshtein.distance(s1, s2)}\n")
                                     union(idx1, idx2)
+                # # это уже основная оптимизация, чтобы не проверять просто в тупую все по O(n^2)
+                # for l in list(length_groups.keys()): 
+                #     for dl in (0, 1, 2):
+                #         current_l = l + dl
+                #         if current_l not in length_groups:
+                #             continue
+                #         # current_l - это нужно для того, чтобы не сравнивать все элеметны со всеми, потому что levenshtain занимает много времени. 
+                #         # ведь логично, что слова 'hello' и 'hi' нет смысла сравнивать, так как их длинна отличается на на 3, а мы рассматриваем только ( |len(a)-(len(b))| <= 2 )
+                #         # поэтому мы берем длину слова hello(5) и сравниваем это слова только со словами, длинна которых 5, 6, 7
+                #         # так мы сильно сократим кол-во проверок levenshtain
+                #         # idx1 - это значение элемента l из length_groups (а это значени в свою очередь индекс элемента из sorted analysand)
+                #         # idx2 - это значение элемента current_l из length_groups
+                #         for idx1 in length_groups[l]:
+                #             s1 = sorted_analysand[idx1][0]
+                #             for idx2 in length_groups[current_l]:
+                #                 # if idx2 > idx1:
+                #                 #     break
+                #                 if idx1 < idx2 or (idx1, idx2) in processed:
+                #                     continue
+
+                #                 processed.add((idx1, idx2))
+                #                 s2 = sorted_analysand[idx2][0]
+
+                #                 if Levenshtein.distance(s1, s2) <= 2:
+                #                     union(idx1, idx2)
 
                 # 5. Формирование результата и списка удаленных элементов
                 groups = defaultdict(list)
