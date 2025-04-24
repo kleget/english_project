@@ -51,17 +51,38 @@ def reqursion(all_files_from_rootdir):
                 insert_many_into_table('delete', 'from_all_files', list_del)
                 insert_many_into_table(*clear_book_name.split('/'), sorted_analysand) # тут записываем окончательный набор данных в БД
 
-def find(u, parent):
-    while parent[u] != u:
-        parent[u] = parent[parent[u]]
-        u = parent[u]
-    return u
+# def find(u, parent):
+#     while parent[u] != u:
+#         parent[u] = parent[parent[u]]
+#         u = parent[u]
+#     return u
 
 def union(u, v, parent):
     root_u = find(u, parent)
     root_v = find(v, parent)
     if root_u != root_v:
         parent[root_v] = root_u
+    return parent
+
+
+
+def find(u, parent):
+    while parent[u] != u:
+        parent[u] = parent[parent[u]]  # Сжатие пути
+        u = parent[u]
+    return u
+
+def union_by_rank(u, v, parent, rank):
+    root_u = find(u, parent)
+    root_v = find(v, parent)
+    if root_u != root_v:
+        # NEW: Объединение по рангу
+        if rank[root_u] > rank[root_v]:
+            parent[root_v] = root_u
+        else:
+            parent[root_u] = root_v
+            if rank[root_u] == rank[root_v]:
+                rank[root_v] += 1
     return parent
 
 def algo_DSU(sorted_analysand, length_groups):
@@ -120,7 +141,9 @@ def algo_DSU(sorted_analysand, length_groups):
                         if abs(len(s1) - len(s2)) > 2 or s1[:3] != s2[:3]:
                             print('log added')
                             log_file.write(f"UNEXPECTED MERGE: {s1} ({len(s1)}) <- {s2} ({len(s2)}), dist={Levenshtein.distance(s1, s2)}\n")
-                        union(idx1, idx2, parent)
+                        parent = list(range(len(sorted_analysand)))
+                        rank = [1] * len(sorted_analysand)  # Инициализация рангов
+                        parent = union_by_rank(idx1, idx2, parent, rank)
     return parent
 
 def algo_cleaner(sorted_analysand):
@@ -136,6 +159,52 @@ def algo_cleaner(sorted_analysand):
 
     parent = algo_DSU(sorted_analysand, length_groups)
 
+    ################################################################
+    prefix_groups = defaultdict(list)
+    for idx, item in enumerate(sorted_analysand):
+        word = item[0]
+        if len(word) >= MIN_WORD_LENGTH:
+            prefix = word[:PREFIX_LENGTH] if len(word) >= PREFIX_LENGTH else word
+            key = (len(word), prefix)
+            prefix_groups[key].append(idx)
+
+    # 3. Кэширование расстояния Левенштейна (NEW)
+    @lru_cache(maxsize=100000)
+    def cached_levenshtein(s1, s2):
+        return Levenshtein.distance(s1, s2)
+
+    # 4. Оптимизированное сравнение пар (NEW)
+    processed_pairs = set()
+    for (length, prefix), group in prefix_groups.items():
+        group_size = len(group)
+        for i in range(group_size):
+            idx1 = group[i]
+            s1 = sorted_analysand[idx1][0]
+            
+            # Сравниваем только с ближайшими соседями
+            for j in range(i+1, min(i+MAX_GROUP_SIZE, group_size)):
+                idx2 = group[j]
+                
+                # Пропускаем уже обработанные пары
+                if (idx1, idx2) in processed_pairs:
+                    continue
+                processed_pairs.add((idx1, idx2))
+                
+                s2 = sorted_analysand[idx2][0]
+                
+                # Быстрая проверка длины
+                if abs(len(s1) - len(s2)) > 2:
+                    continue
+                
+                # Основная проверка
+                if cached_levenshtein(s1, s2) <= 2:
+                    # union(idx1, idx2)
+                    parent = union(idx1, idx2, parent)
+
+
+
+
+    ################################################################
 
     # 5. Формирование результата и списка удаленных элементов
     groups = defaultdict(list)
