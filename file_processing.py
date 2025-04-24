@@ -1,24 +1,6 @@
-import pdfminer
-import pdfminer.high_level
 import os
 import subprocess
 
-# походу эта функция медленная ООООЧЧЕЕЕЕНЬЬЬЬ
-# это ужас, книгу в 500 страниц она обрабатывает ну очень долго, ее нужно либо максимально ускорить и оптимизировать
-# либо просто подключить C++ и там тоже все оптимизировать чтобы все работало быстро
-# если войну и мир будет обрабатывать за 1 мунуту, то заебись, это примерно 15 секунд на 500 страниц
-# сейчас война и мир за 20.5 минут
-# def pdf_to_txt(root, name_file):  # конвертируем .pdf в .txt и по факту копируем /pdf/ в /txt/ только с конвертированными файлами
-#     with open(f'{root}/{name_file}', 'rb') as file:
-#         root = root.replace('/pdf/', '/txt/')
-#         name_file = name_file.split('.')[0]
-#         if not os.path.exists(f'{root}/{name_file}.txt'):
-#             os.makedirs(root, exist_ok=True)  # создаем директорию root, чтобы по сути скопировать структуру из pdf в txt
-#             file1 = open(fr'{root}/{name_file}.txt', 'a+', encoding='UTF-8')  # даже если файл с таким названием уже есть, мы просто ДОзапишем в него информацию в конец
-#             pdfminer.high_level.extract_text_to_fp(file, file1)
-#             file1.close()
-
-# эта работает быстро, но она не работает в pycharm из-за zsh
 def pdf_to_txt(root, name_file):
     # root = root.replace('/pdf/', '/txt/')
     name_file = name_file.split('.')[0]

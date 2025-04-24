@@ -10,3 +10,7 @@ python -m spacy download en_core_web_sm
 sudo apt-get install poppler-utils 
 
 в проекте должна быть пустая папка database
+
+wget https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
+
+pip install fasttext
