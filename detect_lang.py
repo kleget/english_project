@@ -1,0 +1,39 @@
+import fasttext
+import os
+import random
+import numpy as np  # Явно импортируем numpy
+from collections import Counter
+
+def detect_main_language(
+    file_path: str,
+    num_samples: int = 10,
+    sample_size: int = 1000,
+    model_path: str = "lid.176.bin"
+) -> str:
+    model = fasttext.load_model(model_path)
+    file_size = os.path.getsize(file_path)
+    languages = []
+    
+    with open(file_path, "rb") as f:
+        for _ in range(num_samples):
+            position = 0 if file_size <= sample_size else random.randint(0, file_size - sample_size)
+            f.seek(position)
+            
+            try:
+                sample = f.read(sample_size).decode("utf-8", errors='ignore').strip()
+                if not sample:
+                    continue
+                
+                # Исправленный блок обработки предсказаний
+                labels, probs = model.predict(sample.replace("\n", ""), k=1)
+                lang_code = labels[0].replace("__label__", "")
+                languages.append(lang_code)
+                
+            except Exception as e:
+                print(f"Error processing sample: {str(e)}")
+                continue
+    
+    return Counter(languages).most_common(1)[0][0] if languages else "und"
+
+# Пример использования
+# print(detect_main_language("big_text.txt"))
