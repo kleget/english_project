@@ -54,72 +54,8 @@ def reqursion(all_files_from_rootdir):
 
 
 
-def algo_DSU(sorted_analysand, length_groups):
-    print("Optimized algo_DSU")
-    n = len(sorted_analysand)
-    parent = list(range(n))
-    rank = [1]*n
-    processed = set()
-    
-    # Быстрый поиск с path compression
-    find = lambda u: u if parent[u] == u else find(parent[u])
-    
-    # Оптимизированная функция объединения
-    def union(u, v):
-        u_root = find(u)
-        v_root = find(v)
-        if u_root == v_root: return
-        if rank[u_root] < rank[v_root]:
-            parent[u_root] = v_root
-        else:
-            parent[v_root] = u_root
-            if rank[u_root] == rank[v_root]: 
-                rank[u_root] += 1
-
-    # Кэш для расстояний
-    distance_cache = {}
-    
-    # Предварительная фильтрация и группировка
-    filtered_groups = {}
-    for l in length_groups:
-        filtered_groups[l] = [idx for idx in length_groups[l] 
-            if len(sorted_analysand[idx][0]) >= MIN_WORD_LENGTH]
-
-    # Основной цикл с оптимизациями
-    for l in filtered_groups:
-        group = filtered_groups[l]
-        group_size = len(group)
-        
-        for i in range(group_size):
-            idx1 = group[i]
-            s1 = sorted_analysand[idx1][0]
-            s1_prefix = s1[:3]
-            s1_len = len(s1)
-            
-            # Ограничение на количество сравнений
-            for j in range(i+1, min(i+50, group_size)):  # MAX_NEIGHBORS=50
-                idx2 = group[j]
-                if (idx1, idx2) in processed: continue
-                
-                s2 = sorted_analysand[idx2][0]
-                if abs(s1_len - len(s2)) > 1: continue
-                if s1_prefix != s2[:3]: continue
-                
-                # Кэширование расстояний
-                cache_key = (s1, s2) if s1 < s2 else (s2, s1)
-                if cache_key not in distance_cache:
-                    distance_cache[cache_key] = Levenshtein.distance(s1, s2)
-                
-                if distance_cache[cache_key] <= 1:
-                    union(idx1, idx2)
-                    processed.add((idx1, idx2))
-
-    print('Finish optimized algo_DSU')
-    return parent, rank
-
 def algo_cleaner(sorted_analysand):
-    print("algo_cleaner")
-
+#####################################   ПОНЯТНО  #####################################
     def find_dsu(u):
         while parent[u] != u:
             parent[u] = parent[parent[u]]
@@ -138,48 +74,13 @@ def algo_cleaner(sorted_analysand):
                     rank[root_v] += 1
 
 
-    # Группировка по длине
     length_groups = defaultdict(list)
     for idx, item in enumerate(sorted_analysand):
         s = item[0]
         if len(s) >= 4:
             length_groups[len(s)].append(idx)
-
-    # Вызов DSU
+   # Вызов DSU
     parent, rank = algo_DSU(sorted_analysand, length_groups)
-
-    # Дополнительная обработка через префиксы
-    prefix_groups = defaultdict(list)
-    for idx, item in enumerate(sorted_analysand):
-        word = item[0]
-        if len(word) >= MIN_WORD_LENGTH:
-            prefix = word[:PREFIX_LENGTH] if len(word) >= PREFIX_LENGTH else word
-            key = (len(word), prefix)
-            prefix_groups[key].append(idx)
-
-    # Оптимизированное сравнение пар
-    processed_pairs = set()
-    for (length, prefix), group in prefix_groups.items():
-        group_size = len(group)
-        for i in range(group_size):
-            idx1 = group[i]
-            s1 = sorted_analysand[idx1][0]
-            
-            for j in range(i+1, min(i+MAX_GROUP_SIZE, group_size)):
-                idx2 = group[j]
-                
-                if (idx1, idx2) in processed_pairs:
-                    continue
-                processed_pairs.add((idx1, idx2))
-                
-                s2 = sorted_analysand[idx2][0]
-                
-                if abs(len(s1) - len(s2)) > 2:
-                    continue
-                
-                if Levenshtein.distance(s1, s2) <= 2:
-                    # Используем union_by_rank из DSU
-                    union_by_rank_DSU(idx1, idx2)  # Если вынесены в класс
 
     print("Формирование результата и списка удаленных элементов")
     # Формирование результата и списка удаленных элементов
@@ -210,8 +111,79 @@ def algo_cleaner(sorted_analysand):
         total = sum(sorted_analysand[idx][1] for idx in group) # cколько раз замержили, окажется в колонке count в DB
         result.append([main_item[0], str(total)])
 
-    print('finish ')
     return result, list_del
+########################################################################################################################################################
+
+def algo_DSU(sorted_analysand, length_groups):
+#####################################   ПОНЯТНО  #####################################
+    n = len(sorted_analysand)
+    parent = list(range(n))
+    rank = [1]*n
+    processed = set()
+    
+    # Быстрый поиск с path compression
+    find = lambda u: u if parent[u] == u else find(parent[u])
+    
+    # Оптимизированная функция объединения
+    def union(u, v):
+        u_root = find(u) # корень индекса u в parent
+        v_root = find(v) # корень индекса v в parent
+        if u_root == v_root: return # если корни совпадают, то мы ничего не объеднием, корень и есть вершина
+        if rank[u_root] < rank[v_root]: # если rank[u_root] < rank[v_root], то для u_root родителем делаем v_root
+            parent[u_root] = v_root
+        else: # если rank[u_root] >= rank[v_root], то для  v_root родителем делаем u_root
+            parent[v_root] = u_root 
+            if rank[u_root] == rank[v_root]: # вот это до конца не понял, но иначе у нас ранк везде будет одинаково = 1
+                rank[u_root] += 1
+
+########################################################################################################################################################
+
+    # Кэш для расстояний
+    distance_cache = {}
+    
+    # Основной цикл с оптимизациями
+    for l in length_groups: # l - это название группы отображаемое длинну слов в ней
+        # тупое решение
+        # n = range()
+        group = length_groups[l] # это список индексов слов одной длинный
+        num = 0
+        for dumb in range(l-2, l+3):
+            if dumb != l and num <= 3:
+                # gg = 
+                try:
+                    if dumb in length_groups:
+                        num += 1
+                        group += length_groups[dumb]
+                except: pass
+
+        group_size = len(group) # просто для красоты
+        
+        for i in range(group_size):
+            idx1 = group[i] # это индекс 
+            s1 = sorted_analysand[idx1][0] # это само слово из списка слов 
+            s1_len = len(s1) # это для удобства, длинна слова 
+            # так а смысл вообще тогда, если проверка не полноценная будет из-за ограничения группы 
+            # Ограничение на количество сравнений
+            for j in range(i+1, group_size): # это для того, чтобы j перебрал все остальные индексы слов из нашей группы с 
+                idx2 = group[j]     
+                if (idx1, idx2) in processed: continue # типа если уже обрабатывали такое, то пропускаем такую пару, хотя возможно надо что-то удалить, хз
+                
+                s2 = sorted_analysand[idx2][0] # это само слово из списка слов 
+
+                if abs(s1_len - len(s2)) > 3: continue  #типа если слова по длине различаются больше чем на 2, то это точно не слова, которые претендуют на объединение
+                if s1[:3] != s2[:3]: continue # это еще один фильтр, чтобы до левенштейна добралист только с похожими префиксами
+                if s1 == 'автономный' and s2 == 'автоном':
+                    pass
+                # Кэширование расстояний
+                cache_key = (s1, s2) if s1 < s2 else (s2, s1) # кэшируем наши слова в порядке возрастание (сравниваем именно на величину разности слова, то есть сортировка по алфовиту)
+                if cache_key not in distance_cache: # если такие слова еще не сравнивали, то сравниваем левеншейном
+                    distance_cache[cache_key] = Levenshtein.distance(s1, s2)
+                
+                if distance_cache[cache_key] <= LEN_LEVENSHTEIN: # если расстояние левенштейна <= 1, то тогда объединяем.
+                    union(idx1, idx2)
+                    processed.add((idx1, idx2)) # своеобразный кэш для проверки выше, чтобы не объединять и не сравнивать повторно
+
+    return parent, rank
 
 
 def main(rootdir):
