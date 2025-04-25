@@ -47,7 +47,7 @@ def get_txt_file(name_file):
 
 def analysand_func_dict(name_file):  # возвращает список слов в виде словаря
     analysand = {}
-    lemmatized_text = get_txt_file(name_file)
+    lemmatized_text = sorted(get_txt_file(name_file))
 
     for x in range(len(lemmatized_text)):  # перебираем все слова текущей страницы
         if lemmatized_text[x] not in analysand:

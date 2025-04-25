@@ -3,7 +3,6 @@ import pymorphy3
 import re
 import spacy
 from functools import lru_cache
-import time
 import os
 
 nlp = None
@@ -17,7 +16,7 @@ def init_spacy():
 # Глобальный MorphAnalyzer (лучше тоже в init, но можно и так)
 morph = pymorphy3.MorphAnalyzer()
 
-# Кэш — multiprocessing не сохраняет кэш между процессами, но всё равно можно использовать внутри функции
+# Кэш
 @lru_cache(maxsize=100000)
 def get_lemma(word):
     return morph.parse(word)[0].normal_form
