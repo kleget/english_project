@@ -148,7 +148,7 @@ def algo_DSU(sorted_analysand, length_groups):
         group = length_groups[l] # это список индексов слов одной длинный
         num = 0
         for dumb in range(l-2, l+3):
-            if dumb != l and num <= 3:
+            if dumb != l:
                 # gg = 
                 try:
                     if dumb in length_groups:
