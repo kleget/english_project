@@ -62,18 +62,6 @@ def algo_cleaner(sorted_analysand):
             u = parent[u]
         return u
 
-    def union_by_rank_DSU(u, v):
-        root_u = find_dsu(u)
-        root_v = find_dsu(v)
-        if root_u != root_v:
-            if rank[root_u] > rank[root_v]:
-                parent[root_v] = root_u
-            else:
-                parent[root_u] = root_v
-                if rank[root_u] == rank[root_v]:
-                    rank[root_v] += 1
-
-
     length_groups = defaultdict(list)
     for idx, item in enumerate(sorted_analysand):
         s = item[0]
@@ -112,79 +100,115 @@ def algo_cleaner(sorted_analysand):
         result.append([main_item[0], str(total)])
 
     return result, list_del
-########################################################################################################################################################
+
 
 def algo_DSU(sorted_analysand, length_groups):
-#####################################   ПОНЯТНО  #####################################
     n = len(sorted_analysand)
     parent = list(range(n))
-    rank = [1]*n
+    rank = [1] * n
     processed = set()
     
-    # Быстрый поиск с path compression
-    find = lambda u: u if parent[u] == u else find(parent[u])
+    # Итеративная реализация find с path compression
+    def find(u):
+        while parent[u] != u:
+            parent[u] = parent[parent[u]]  # Path compression
+            u = parent[u]
+        return u
     
-    # Оптимизированная функция объединения
     def union(u, v):
-        u_root = find(u) # корень индекса u в parent
-        v_root = find(v) # корень индекса v в parent
-        if u_root == v_root: return # если корни совпадают, то мы ничего не объеднием, корень и есть вершина
-        if rank[u_root] < rank[v_root]: # если rank[u_root] < rank[v_root], то для u_root родителем делаем v_root
+        u_root = find(u)
+        v_root = find(v)
+        if u_root == v_root:
+            return
+        if rank[u_root] < rank[v_root]:
             parent[u_root] = v_root
-        else: # если rank[u_root] >= rank[v_root], то для  v_root родителем делаем u_root
-            parent[v_root] = u_root 
-            if rank[u_root] == rank[v_root]: # вот это до конца не понял, но иначе у нас ранк везде будет одинаково = 1
+        else:
+            parent[v_root] = u_root
+            if rank[u_root] == rank[v_root]:
                 rank[u_root] += 1
-
-########################################################################################################################################################
-
-    # Кэш для расстояний
+    
+    # Предварительно извлекаем слова, их длины и префиксы
+    words = [word for word, _ in sorted_analysand]
+    lengths = [len(word) for word in words]
+    prefixes = [word[:3] if len(word) >= 3 else word for word in words]
+    
+    # Создаем кэш расстояний
     distance_cache = {}
     
-    # Основной цикл с оптимизациями
-    for l in length_groups: # l - это название группы отображаемое длинну слов в ней
-        # тупое решение
-        # n = range()
-        group = length_groups[l] # это список индексов слов одной длинный
-        num = 0
-        for dumb in range(l-2, l+3):
-            if dumb != l:
-                # gg = 
-                try:
-                    if dumb in length_groups:
-                        num += 1
-                        group += length_groups[dumb]
-                except: pass
-
-        group_size = len(group) # просто для красоты
+    # Сортируем длины для обработки
+    sorted_lengths = sorted(length_groups.keys())
+    
+    # Обрабатываем каждую длину
+    for l in sorted_lengths:
+        current_group = length_groups[l]
+        # Группируем текущую группу по префиксам
+        current_prefix_map = defaultdict(list)
+        for idx in current_group:
+            current_prefix_map[prefixes[idx]].append(idx)
         
-        for i in range(group_size):
-            idx1 = group[i] # это индекс 
-            s1 = sorted_analysand[idx1][0] # это само слово из списка слов 
-            s1_len = len(s1) # это для удобства, длинна слова 
-            # так а смысл вообще тогда, если проверка не полноценная будет из-за ограничения группы 
-            # Ограничение на количество сравнений
-            for j in range(i+1, group_size): # это для того, чтобы j перебрал все остальные индексы слов из нашей группы с 
-                idx2 = group[j]     
-                if (idx1, idx2) in processed: continue # типа если уже обрабатывали такое, то пропускаем такую пару, хотя возможно надо что-то удалить, хз
-                
-                s2 = sorted_analysand[idx2][0] # это само слово из списка слов 
-
-                if abs(s1_len - len(s2)) > 3: continue  #типа если слова по длине различаются больше чем на 2, то это точно не слова, которые претендуют на объединение
-                if s1[:3] != s2[:3]: continue # это еще один фильтр, чтобы до левенштейна добралист только с похожими префиксами
-                if s1 == 'автономный' and s2 == 'автоном':
-                    pass
-                # Кэширование расстояний
-                cache_key = (s1, s2) if s1 < s2 else (s2, s1) # кэшируем наши слова в порядке возрастание (сравниваем именно на величину разности слова, то есть сортировка по алфовиту)
-                if cache_key not in distance_cache: # если такие слова еще не сравнивали, то сравниваем левеншейном
-                    distance_cache[cache_key] = Levenshtein.distance(s1, s2)
-                
-                if distance_cache[cache_key] <= LEN_LEVENSHTEIN: # если расстояние левенштейна <= 1, то тогда объединяем.
-                    union(idx1, idx2)
-                    processed.add((idx1, idx2)) # своеобразный кэш для проверки выше, чтобы не объединять и не сравнивать повторно
-
+        # Обрабатываем пары внутри текущей группы
+        for prefix, indices in current_prefix_map.items():
+            num_indices = len(indices)
+            for i in range(num_indices):
+                idx1 = indices[i]
+                s1 = words[idx1]
+                len1 = lengths[idx1]
+                for j in range(i + 1, num_indices):
+                    idx2 = indices[j]
+                    s2 = words[idx2]
+                    len2 = lengths[idx2]
+                    if abs(len1 - len2) > LEN_LEVENSHTEIN:
+                        continue
+                    pair = tuple(sorted((idx1, idx2)))
+                    if pair in processed:
+                        continue
+                    # Используем отсортированные слова для кэша
+                    cache_key = tuple(sorted((s1, s2)))
+                    if cache_key not in distance_cache:
+                        distance_cache[cache_key] = Levenshtein.distance(s1, s2)
+                    if distance_cache[cache_key] <= LEN_LEVENSHTEIN:
+                        union(idx1, idx2)
+                        processed.add(pair)
+        
+        # Обрабатываем соседние группы длин
+        for dl in (-3, -2, -1, 1, 2, 3):
+            neighbor_l = l + dl
+            if neighbor_l not in length_groups:
+                continue
+            neighbor_group = length_groups[neighbor_l]
+            # Группируем соседнюю группу по префиксам
+            neighbor_prefix_map = defaultdict(list)
+            for idx in neighbor_group:
+                neighbor_prefix_map[prefixes[idx]].append(idx)
+            
+            # Сравниваем текущие префиксы с соседними
+            for prefix in current_prefix_map:
+                if prefix not in neighbor_prefix_map:
+                    continue
+                current_indices = current_prefix_map[prefix]
+                neighbor_indices = neighbor_prefix_map[prefix]
+                for idx1 in current_indices:
+                    s1 = words[idx1]
+                    len1 = lengths[idx1]
+                    for idx2 in neighbor_indices:
+                        # Проверяем порядок индексов для избежания дубликатов
+                        if idx1 >= idx2:
+                            continue
+                        s2 = words[idx2]
+                        len2 = lengths[idx2]
+                        if abs(len1 - len2) > LEN_LEVENSHTEIN:
+                            continue
+                        pair = tuple(sorted((idx1, idx2)))
+                        if pair in processed:
+                            continue
+                        cache_key = tuple(sorted((s1, s2)))
+                        if cache_key not in distance_cache:
+                            distance_cache[cache_key] = Levenshtein.distance(s1, s2)
+                        if distance_cache[cache_key] <= LEN_LEVENSHTEIN:
+                            union(idx1, idx2)
+                            processed.add(pair)
+    
     return parent, rank
-
 
 def main(rootdir):
     # тут мы просто делаем все имена книг чистыми без мусора(пробегается только по /pdf/)
