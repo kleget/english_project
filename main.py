@@ -28,7 +28,7 @@ def print_all_files_from_rootdir():
 
 
 def reqursion(all_files_from_rootdir):
-    math_word = {} # это все слова из всех файлов, не по отдельности, а именно все вообще математические слов
+    # math_word = {} # это все слова из всех файлов, не по отдельности, а именно все вообще математические слов
     # basik_words = {}
     '''это просто все слова, обычные, по хорошему они должны быть статические и в БД, а не каждый раз собирать их из множества книг'''
 
@@ -37,13 +37,14 @@ def reqursion(all_files_from_rootdir):
             reqursion(y)
         else:
             if '.txt' in y:
+                math_word = {}
                 clear_book_name = re.sub(r'[^a-zA-Z0-9а-яА-ЯёЁ/]', '', y.split('.')[0], flags=re.IGNORECASE)
                 A = analysand_func_dict(y.replace('.txt', ''))  # получаем массив НЕ отсортированных готовых данных из книги
                 # B = select_from_table(clear_book_name.split('/')[0], f"SELECT word FROM {clear_book_name.split('/')[1]}")  # B - это обычные слова, А - это специальные слова
                 B = ['']
-                for all_files_from_rootdir in A:  # тут мы проверяем, чтобы в math_word попали только те слова, которых нет в обычной книге
-                    if (all_files_from_rootdir not in B) and (all_files_from_rootdir != '') and (all_files_from_rootdir != "''"):
-                        math_word[all_files_from_rootdir] = A[all_files_from_rootdir]
+                for w in A:  # тут мы проверяем, чтобы в math_word попали только те слова, которых нет в обычной книге
+                    if (w not in B) and (w != '') and (w != "''"):
+                        math_word[w] = A[w]
 
                 sorted_analysand = sorted(math_word.items(), key=lambda item: item[1], reverse=True)
                 sorted_analysand, list_del = algo_cleaner(sorted_analysand)

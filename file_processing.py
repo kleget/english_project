@@ -7,13 +7,13 @@ def pdf_to_txt(root, name_file):
     print(f"pdftotext: {root}/{name_file}.txt")
     if not os.path.exists(f"{root.replace('/pdf/', '/txt/')}/{name_file}.txt"):
         os.makedirs(root.replace('/pdf/', '/txt/'), exist_ok=True)
-        subprocess.run(["pdftotext", "-layout", f"{root.replace('/txt/', '/pdf/')}/{name_file}.pdf", f"{root.replace('/pdf/', '/txt/')}/{name_file}.txt"], check=True)
+        subprocess.run(["pdftotext", "-layout", f"{root.replace('/txt/', '/pdf/')}/{name_file}.pdf", f"{root.replace('/pdf/', '/txt/')}/{name_file}.txt", '-q'], check=True)
 
 def rename_files_in_directory(directory):  # удаляем весь мусор из названия файла
     for root, dirs, files in os.walk(directory):
         for filename in files:
             if ('.' in filename) and (filename.count('.') > 1):
-                new_filename = filename.replace('.', '_').replace(' ', '_').replace(',', '_').replace('__', '_').replace('___', '_')
+                new_filename = filename.replace('.', '_').replace(' ', '_').replace(',', '_').replace('__', '_').replace('___', '_').replace('[', '_').replace(']', '_')
                 new_filename = new_filename.replace('_pdf', '.pdf')
                 old_file = os.path.join(root, filename)
                 new_file = os.path.join(root, new_filename).replace('\\', '/')
