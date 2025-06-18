@@ -8,6 +8,7 @@ import time
 from config import *
 import Levenshtein
 from collections import defaultdict
+from create_non_science_db import*
     
 
 
@@ -31,12 +32,24 @@ def reqursion(all_files_from_rootdir):
     # math_word = {} # это все слова из всех файлов, не по отдельности, а именно все вообще математические слов
     # basik_words = {}
     '''это просто все слова, обычные, по хорошему они должны быть статические и в БД, а не каждый раз собирать их из множества книг'''
-
+    # a = 0
+    # c = ''
     for y in all_files_from_rootdir:
         if type(y) == list:
+            # print(a)
+            # if a >=2:
+                # print(111111111111111111111111111111111)
+                # create_intersection_table(db_name=f"{c}.db")
+
+            # index = all_files_from_rootdir.index(y)
+            # if type(all_files_from_rootdir[index-1]) != list:
+            # create_intersection_table(db_name=f"{all_files_from_rootdir[index-1][0].split('/')[0]}.db")
             reqursion(y)
         else:
             if '.txt' in y:
+
+                # a+=1
+                # c = y.split('/')[0]
                 math_word = {}
                 clear_book_name = re.sub(r'[^a-zA-Z0-9а-яА-ЯёЁ/]', '', y.split('.')[0], flags=re.IGNORECASE)
                 A = analysand_func_dict(y.replace('.txt', ''))  # получаем массив НЕ отсортированных готовых данных из книги
@@ -52,6 +65,13 @@ def reqursion(all_files_from_rootdir):
                 print('Book: ', y, "Count: ", len(sorted_analysand), 'del: ', len(list_del))
                 insert_many_into_table('delete', 'from_all_files', list_del)
                 insert_many_into_table(*clear_book_name.split('/'), sorted_analysand) # тут записываем окончательный набор данных в БД
+                if y == all_files_from_rootdir[-1]:
+                    # create_intersection_table(db_name=f"{y.split('/')[0]}.db")
+                        logging.basicConfig(level=logging.INFO, format='%(message)s')
+                        logging.info(f"=== Обработка {y} ===")
+                        create_intersection_table(db_name=f"{clear_book_name.split('/')[0]}.db")
+                # create_intersection_table(db_name=f"{y.split('/')[0]}.db")
+
 
 
 
