@@ -10,7 +10,7 @@ import Levenshtein
 from collections import defaultdict
 from create_non_science_db import*
     
-
+print('devdev')
 
 # начальное время
 start_time = time.time()
