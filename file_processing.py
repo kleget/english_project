@@ -4,7 +4,7 @@ import subprocess
 def pdf_to_txt(root, name_file):
     # root = root.replace('/pdf/', '/txt/')
     name_file = name_file.split('.')[0]
-    print(f"pdftotext: {root}/{name_file}.txt")
+    # print(f"pdftotext: {root}/{name_file}.txt")
     if not os.path.exists(f"{root.replace('/pdf/', '/txt/')}/{name_file}.txt"):
         os.makedirs(root.replace('/pdf/', '/txt/'), exist_ok=True)
         subprocess.run(["pdftotext", "-layout", f"{root.replace('/txt/', '/pdf/')}/{name_file}.pdf", f"{root.replace('/pdf/', '/txt/')}/{name_file}.txt", '-q'], check=True)

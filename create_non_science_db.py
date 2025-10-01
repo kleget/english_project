@@ -1,3 +1,4 @@
+from termcolor import colored
 from config import *
 import sqlite3
 import os
@@ -35,7 +36,7 @@ def create_intersection_table(db_name, result_table: str = "word_intersection"):
     db_path = Path('database') / db_name
     
     if not db_path.exists():
-        logging.error(f"Файл базы данных {db_path} не найден!")
+        print(f"Файл базы данных {db_path} не найден!")
         return
     
     conn = sqlite3.connect(db_path)
@@ -47,10 +48,10 @@ def create_intersection_table(db_name, result_table: str = "word_intersection"):
         tables = [row[0] for row in cursor.fetchall() if row[0] != result_table]
         
         if len(tables) < 2:
-            logging.warning(f"Нужно минимум 2 таблицы, найдено {len(tables)}")
+            print(f"Нужно минимум 2 таблицы, найдено {len(tables)}")
             return
         
-        # logging.info(f"Обрабатываем таблицы: {', '.join(tables)}")
+        # print(f"Обрабатываем таблицы: {', '.join(tables)}")
         
         # Удаляем старую версию результирующей таблицы
         cursor.execute(f"DROP TABLE IF EXISTS {result_table}")
@@ -84,13 +85,13 @@ def create_intersection_table(db_name, result_table: str = "word_intersection"):
         result = cursor.execute(f"SELECT word, total_count FROM {result_table} ORDER BY total_count DESC LIMIT 5").fetchall()
         total_words = cursor.execute(f"SELECT COUNT(*) FROM {result_table}").fetchone()[0]
         
-        logging.info(f"Создана таблица {result_table} с {total_words} словами")
-        # logging.info("Топ-5 самых частых слов:")
+        print(colored(f"Создана таблица {result_table} с {total_words} словами", 'green'))
+        # print("Топ-5 самых частых слов:")
         # for word, count in result:
-        #     logging.info(f"{word}: {count}")
+        #     print(f"{word}: {count}")
             
     except Exception as e:
-        logging.error(f"Ошибка: {str(e)}")
+        print(colored(f"Ошибка: {str(e)}", 'red'))
         conn.rollback()
     finally:
         conn.close()
@@ -108,7 +109,7 @@ def create_union_table(db_name, result_table: str = "global_union"):
     db_path = Path('database') / db_name
     
     if not db_path.exists():
-        logging.error(f"Файл базы данных {db_path} не найден!")
+        print(f"Файл базы данных {db_path} не найден!")
         return
     
     conn = sqlite3.connect(db_path)
@@ -120,10 +121,10 @@ def create_union_table(db_name, result_table: str = "global_union"):
         tables = [row[0] for row in cursor.fetchall() if row[0] != result_table]
         tables.remove('word_intersection')
         if not tables:
-            logging.warning("В базе данных нет таблиц для обработки")
+            print("В базе данных нет таблиц для обработки")
             return
         
-        # logging.info(f"Объединяем данные из таблиц: {', '.join(tables)}")
+        # print(f"Объединяем данные из таблиц: {', '.join(tables)}")
         
         # Удаляем старую версию результирующей таблицы
         cursor.execute(f"DROP TABLE IF EXISTS {result_table}")
@@ -148,20 +149,20 @@ def create_union_table(db_name, result_table: str = "global_union"):
         total_words = cursor.execute(f"SELECT COUNT(*) FROM {result_table}").fetchone()[0]
         top_words = cursor.execute(f"SELECT word, total_count FROM {result_table} LIMIT 5").fetchall()
         
-        logging.info(f"Создана таблица {result_table} с {total_words} уникальными словами")
-        # logging.info("Топ-5 самых частых слов:")
+        print(colored(f"Создана таблица {result_table} с {total_words} уникальными словами", 'green'))
+        # print("Топ-5 самых частых слов:")
         # for word, count in top_words:
-        #     logging.info(f"{word}: {count}")
+        #     print(f"{word}: {count}")
             
     except Exception as e:
-        logging.error(f"Ошибка: {str(e)}")
+        print(colored(f"Ошибка: {str(e)}", 'red'))
         conn.rollback()
     finally:
         conn.close()
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(message)s')
-    logging.info("=== Обработка biology.db ===")
+    # logging.basicConfig(level=print, format='%(message)s')
+    print("=== Обработка biology.db ===")
     create_intersection_table('biology.db')
     create_union_table('biology.db')

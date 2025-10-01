@@ -3,6 +3,7 @@ import os
 import random
 import numpy as np  # Явно импортируем numpy
 from collections import Counter
+from termcolor import colored
 
 def detect_main_language(
     file_path: str,
@@ -30,7 +31,7 @@ def detect_main_language(
                 languages.append(lang_code)
                 
             except Exception as e:
-                print(f"Error processing sample: {str(e)}")
+                print(colored(f"Error processing sample: {str(e)}"), 'red')
                 continue
     
     return Counter(languages).most_common(1)[0][0] if languages else "und"

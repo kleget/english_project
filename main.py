@@ -9,8 +9,8 @@ from config import *
 import Levenshtein
 from collections import defaultdict
 from create_non_science_db import*
-    
-print('devdev')
+from colorama import init
+from termcolor import colored
 
 # начальное время
 start_time = time.time()
@@ -42,8 +42,10 @@ def reqursion(all_files_from_rootdir):
                 math_word = {}
                 clear_book_name = re.sub(r'[^a-zA-Z0-9а-яА-ЯёЁ/]', '', y.split('.')[0], flags=re.IGNORECASE)
                 A = analysand_func_dict(y.replace('.txt', ''))  # получаем массив НЕ отсортированных готовых данных из книги
-                # B = select_from_table(clear_book_name.split('/')[0], f"SELECT word FROM {clear_book_name.split('/')[1]}")  # B - это обычные слова, А - это специальные слова
-                B = ['']
+                try:
+                    B = select_from_table(clear_book_name.split('/')[0], f"SELECT word FROM {clear_book_name.split('/')[1]}")  # B - это обычные слова, А - это специальные слова
+                except: 
+                    B = ['']
                 for w in A:  # тут мы проверяем, чтобы в math_word попали только те слова, которых нет в обычной книге
                     if (w not in B) and (w != '') and (w != "''"):
                         math_word[w] = A[w]
@@ -51,12 +53,12 @@ def reqursion(all_files_from_rootdir):
                 sorted_analysand = sorted(math_word.items(), key=lambda item: item[1], reverse=True)
                 sorted_analysand, list_del = algo_cleaner(sorted_analysand)
 
-                print('Book: ', y, "Count: ", len(sorted_analysand), 'del: ', len(list_del))
+                print('Book: ', y[:20:], "Count: ", len(sorted_analysand), 'del: ', len(list_del))
                 insert_many_into_table('delete', 'from_all_files', list_del)
                 insert_many_into_table(*clear_book_name.split('/'), sorted_analysand) # тут записываем окончательный набор данных в БД
                 if y == all_files_from_rootdir[-1]:
-                    logging.basicConfig(level=logging.INFO, format='%(message)s')
-                    logging.info(f"=== Обработка {y} ===")
+                    # logging.basicConfig(level=print, format='%(message)s')
+                    print(f"=== Обработка {y} ===")
                     create_intersection_table(db_name=f"{clear_book_name.split('/')[0]}.db")
                     create_union_table(db_name=f"{clear_book_name.split('/')[0]}.db")
 
@@ -224,7 +226,7 @@ def main(rootdir):
     for root, dirs, files in os.walk(rootdir):
         if files:  # Если в папке есть файлы
             root = root.replace('\\', '/')# Выводим путь к папке
-            print(root)  # ну это своеобразный индикатор, того, какую папку мы проходим и какие файлы обрабатываем сейчас.
+            # print(root)  # ну это своеобразный индикатор, того, какую папку мы проходим и какие файлы обрабатываем сейчас.
 
             for file in files:
                 if '/txt/' not in root:
@@ -234,8 +236,16 @@ def main(rootdir):
 
 
 if __name__ == "__main__":
+    print(1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111)
     main(rootdir)
-
+    print(2222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222)
+    os.remove("database/biology.db")
+    os.remove("database/code.db")
+    os.remove("database/math.db")
+    os.remove("database/physics.db")
+    print(3333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333)
+    main(rootdir)
+    print(4444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print('Все выполнилось за: ', elapsed_time, 'секунд')
