@@ -55,5 +55,5 @@ def select_from_table(db_name: str, request: str):
     with sq.connect(f"database/{db_name}") as con:
         sql = con.cursor()
         sql.execute(request)
-        return sql.fetchall()
+        return [item[0] for item in sql.fetchall()]
 

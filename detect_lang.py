@@ -5,6 +5,9 @@ import numpy as np  # Явно импортируем numpy
 from collections import Counter
 from termcolor import colored
 
+fasttext.FastText.eprint = lambda x: None  # отключаем все сообщения fastText
+
+
 def detect_main_language(
     file_path: str,
     num_samples: int = 10,
@@ -25,7 +28,6 @@ def detect_main_language(
                 if not sample:
                     continue
                 
-                # Исправленный блок обработки предсказаний
                 labels, probs = model.predict(sample.replace("\n", ""), k=1)
                 lang_code = labels[0].replace("__label__", "")
                 languages.append(lang_code)
@@ -37,4 +39,4 @@ def detect_main_language(
     return Counter(languages).most_common(1)[0][0] if languages else "und"
 
 # Пример использования
-# print(detect_main_language("big_text.txt"))
+# print(detect_main_language("E:/Code/english_project/book/txt/ru_non_science/test.txt"))

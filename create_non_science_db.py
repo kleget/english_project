@@ -12,11 +12,13 @@ def similarity(s1, s2):
   matcher = difflib.SequenceMatcher(None, s1, s2)
   return matcher.ratio()
 
+
 def select_all_tables(n):
     with sq.connect(f"database/{n}.db") as con:
         sql = con.cursor()
         sql.execute("SELECT name FROM sqlite_sequence;")
         return sql.fetchall()
+
 
 def select_all_data_from_tables(db, name):
     with sq.connect(f"database/{db}.db") as con:
@@ -82,7 +84,7 @@ def create_intersection_table(db_name, result_table: str = "word_intersection"):
         conn.commit()
         
         # Проверяем результат
-        result = cursor.execute(f"SELECT word, total_count FROM {result_table} ORDER BY total_count DESC LIMIT 5").fetchall()
+        # result = cursor.execute(f"SELECT word, total_count FROM {result_table} ORDER BY total_count DESC LIMIT 5").fetchall()
         total_words = cursor.execute(f"SELECT COUNT(*) FROM {result_table}").fetchone()[0]
         
         print(colored(f"Создана таблица {result_table} с {total_words} словами", 'green'))
@@ -95,7 +97,6 @@ def create_intersection_table(db_name, result_table: str = "word_intersection"):
         conn.rollback()
     finally:
         conn.close()
-
 
 
 def create_union_table(db_name, result_table: str = "global_union"):
@@ -147,7 +148,7 @@ def create_union_table(db_name, result_table: str = "global_union"):
         
         # Получаем статистику
         total_words = cursor.execute(f"SELECT COUNT(*) FROM {result_table}").fetchone()[0]
-        top_words = cursor.execute(f"SELECT word, total_count FROM {result_table} LIMIT 5").fetchall()
+        # top_words = cursor.execute(f"SELECT word, total_count FROM {result_table} LIMIT 5").fetchall()
         
         print(colored(f"Создана таблица {result_table} с {total_words} уникальными словами", 'green'))
         # print("Топ-5 самых частых слов:")
