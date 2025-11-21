@@ -28,39 +28,51 @@ def print_all_files_from_rootdir():
     return list_all_files_from_rootdir
 
 
-def reqursion(all_files_from_rootdir):
-    # math_word = {} # это все слова из всех файлов, не по отдельности, а именно все вообще математические слов
+def reqursion(all_files_from_rootdir, start_num):
+    # scinence_word = {} # это все слова из всех файлов, не по отдельности, а именно все вообще математические слов
     # basik_words = {}
     '''это просто все слова, обычные, по хорошему они должны быть статические и в БД, а не каждый раз собирать их из множества книг'''
 
     for y in all_files_from_rootdir:
         if type(y) == list:
 
-            reqursion(y)
+            reqursion(y, start_num)
         else:
             if '.txt' in y:
-                math_word = {}
-                clear_book_name = re.sub(r'[^a-zA-Z0-9а-яА-ЯёЁ/]', '', y.split('.')[0], flags=re.IGNORECASE)
-                A = analysand_func_dict(y.replace('.txt', ''))  # получаем массив НЕ отсортированных готовых данных из книги
-                try:
-                    B = select_from_table(clear_book_name.split('/')[0], f"SELECT word FROM {clear_book_name.split('/')[1]}")  # B - это обычные слова, А - это специальные слова
-                except: 
-                    B = ['']
-                for w in A:  # тут мы проверяем, чтобы в math_word попали только те слова, которых нет в обычной книге
-                    if (w not in B) and (w != '') and (w != "''"):
-                        math_word[w] = A[w]
+                if (start_num == 1 and 'non_science' in y) or (start_num != 1 and 'non_science' not in y): # это надо чтобы мы не удаляли грязные файлы science после того как первый раз запустили код и получили файлы non_science
+                    scinence_word = {}
+                    clear_book_name = re.sub(r'[^a-zA-Z0-9а-яА-ЯёЁ/]', '', y.split('.')[0], flags=re.IGNORECASE)
+                    A = analysand_func_dict(y.replace('.txt', ''))  # получаем массив НЕ отсортированных готовых данных из книги
+                    try: # этот блок отработает при втором запуске, так как при первом табллиц nonscience еще нет либо они пусты
+                        lang_current_book = detect_main_language(f"E:/Code/english_project/book/txt/{y}")
+                        if lang_current_book =='ru':
+                            B = select_from_table('runonscience', "SELECT word FROM global_union")
+                        elif lang_current_book =='en':
+                            B = select_from_table('ennonscience', "SELECT word FROM global_union")
+                            # B = select_from_table(clear_book_name.split('/')[0], f"SELECT word FROM {clear_book_name.split('/')[1]}")  
+                        # B - это обычные слова, А - это специальные слова
+                        # тут вы выбираем все слова из научной базы для дальнейшего сравнения с non_science.db
+                        # если это первый запускт, то блок try не отработает, ибо файлы бд по наукам пустые
+                        # при втором запуске уже В будет состоять из данных из файла 
+                        # TODO тут должно быть B - выбор из баз non science, а не clear_book_name
+                    except: 
+                        B = ['']
+                        print('NO')
+                    for w in A:  # тут мы проверяем, чтобы в scinence_word попали только те слова, которых нет в обычной книге
+                        if (w not in B) and (w != '') and (w != "''"):
+                            scinence_word[w] = A[w]
 
-                sorted_analysand = sorted(math_word.items(), key=lambda item: item[1], reverse=True)
-                sorted_analysand, list_del = algo_cleaner(sorted_analysand)
+                    sorted_analysand = sorted(scinence_word.items(), key=lambda item: item[1], reverse=True)
+                    sorted_analysand, list_del = algo_cleaner(sorted_analysand)
 
-                print('Book: ', y[:20:], "Count: ", len(sorted_analysand), 'del: ', len(list_del))
-                insert_many_into_table('delete', 'from_all_files', list_del)
-                insert_many_into_table(*clear_book_name.split('/'), sorted_analysand) # тут записываем окончательный набор данных в БД
-                if y == all_files_from_rootdir[-1]:
-                    # logging.basicConfig(level=print, format='%(message)s')
-                    print(f"=== Обработка {y} ===")
-                    create_intersection_table(db_name=f"{clear_book_name.split('/')[0]}.db")
-                    create_union_table(db_name=f"{clear_book_name.split('/')[0]}.db")
+                    print('Book: ', y[:20:], "Count: ", len(sorted_analysand), 'del: ', len(list_del))
+                    insert_many_into_table('delete', 'from_all_files', list_del)
+                    insert_many_into_table(*clear_book_name.split('/'), sorted_analysand) # тут записываем окончательный набор данных в БД
+                    if y == all_files_from_rootdir[-1]:
+                        # короче если мы обработали последний файл из научной папки, значит находим пересечение и объедение всех бд
+                        print(f"=== Обработка {y.split('/')[0]} ===")
+                        create_intersection_table(db_name=f"{clear_book_name.split('/')[0]}.db")
+                        create_union_table(db_name=f"{clear_book_name.split('/')[0]}.db")
 
 
 def algo_cleaner(sorted_analysand):
@@ -218,7 +230,8 @@ def algo_DSU(sorted_analysand, length_groups):
     
     return parent, rank
 
-def main(rootdir):
+
+def main(rootdir, start_num):
     # тут мы просто делаем все имена книг чистыми без мусора(пробегается только по /pdf/)
     rename_files_in_directory(rootdir)
 
@@ -232,20 +245,21 @@ def main(rootdir):
                 if '/txt/' not in root:
                     pdf_to_txt(root, file)
 
-    reqursion(print_all_files_from_rootdir())
+    reqursion(print_all_files_from_rootdir(), start_num)
 
 
 if __name__ == "__main__":
-    print(1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111)
-    main(rootdir)
-    print(2222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222)
-    os.remove("database/biology.db")
-    os.remove("database/code.db")
-    os.remove("database/math.db")
-    os.remove("database/physics.db")
-    print(3333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333)
-    main(rootdir)
-    print(4444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444)
+    #мне очень непонятно, нахуя я написал эту ебанистику
+
+    main(rootdir, 1) # это чтобы мы сформировали файлы non_scienct
+
+    # os.remove("database/biology.db")
+    # os.remove("database/code.db")
+    # os.remove("database/math.db")
+    # os.remove("database/physics.db")
+
+    main(rootdir, 2) # а это чтобы файылы с науками были чистыми
+
     end_time = time.time()
     elapsed_time = end_time - start_time
     print('Все выполнилось за: ', elapsed_time, 'секунд')
