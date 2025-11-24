@@ -7,7 +7,8 @@ def pdf_to_txt(root, name_file):
     # print(f"pdftotext: {root}/{name_file}.txt")
     if not os.path.exists(f"{root.replace('/pdf/', '/txt/')}/{name_file}.txt"):
         os.makedirs(root.replace('/pdf/', '/txt/'), exist_ok=True)
-        subprocess.run(["pdftotext", "-layout", f"{root.replace('/txt/', '/pdf/')}/{name_file}.pdf", f"{root.replace('/pdf/', '/txt/')}/{name_file}.txt", '-q'], check=True)
+        subprocess.run(["pdftotext", "-layout", "-nopgbrk", f"{root.replace('/txt/', '/pdf/')}/{name_file}.pdf", f"{root.replace('/pdf/', '/txt/')}/{name_file}.txt", '-q'], check=True)
+
 
 def rename_files_in_directory(directory):  # удаляем весь мусор из названия файла
     for root, dirs, files in os.walk(directory):
