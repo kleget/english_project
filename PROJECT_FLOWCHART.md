@@ -4,91 +4,91 @@
 
 ```mermaid
 flowchart TD
-    START([ЗАПУСК ПРОГРАММЫ<br/>python main.py])
+    START[ЗАПУСК ПРОГРАММЫ python main.py]
 
     %% Первый проход - сбор базы non_science
-    START --> FIRST_PASS[main(rootdir, 1)<br/>ПЕРВЫЙ ПРОХОД<br/>Сбор слов из художественной литературы]
-    FIRST_PASS --> CLEAN_NAMES_1[rename_files_in_directory<br/>Очистка имен PDF файлов]
-    CLEAN_NAMES_1 --> CONVERT_PDF_1[Цикл os.walk + pdf_to_txt<br/>Конвертация PDF → TXT<br/>для non_science книг]
-    CONVERT_PDF_1 --> PROCESS_NON_SCIENCE[reqursion<br/>Обработка TXT файлов non_science]
+    START --> FIRST_PASS[main rootdir, 1 - ПЕРВЫЙ ПРОХОД - Сбор слов из художественной литературы]
+    FIRST_PASS --> CLEAN_NAMES_1[rename_files_in_directory - Очистка имен PDF файлов]
+    CLEAN_NAMES_1 --> CONVERT_PDF_1[Цикл os.walk + pdf_to_txt - Конвертация PDF → TXT для non_science книг]
+    CONVERT_PDF_1 --> PROCESS_NON_SCIENCE[recursion - Обработка TXT файлов non_science]
 
-    PROCESS_NON_SCIENCE --> EXTRACT_WORDS_NS[analysand_func_dict<br/>Извлечение слов из книги]
-    EXTRACT_WORDS_NS --> READ_FILE_NS[get_txt_file<br/>Чтение и предобработка TXT]
-    READ_FILE_NS --> CLEAN_TEXT_NS[removing_anomaly<br/>Удаление цифр, коротких слов,<br/>вставка пробелов вокруг символов]
-    CLEAN_TEXT_NS --> LEMMATIZE_NS[parallel_lemmatize_mp<br/>Параллельная лемматизация<br/>русского/английского текста]
-    LEMMATIZE_NS --> FIX_HYPHENS_NS[fix_hyphenated_words<br/>Исправление перенесённых слов<br/>с дефисами и без]
-    FIX_HYPHENS_NS --> FILTER_COMMON_NS[Фильтрация слов<br/>Исключение ОБЫЧНЫХ слов<br/>из базы non_science]
-    FILTER_COMMON_NS --> GET_COMMON_WORDS_NS[select_from_table<br/>Получение обычных слов<br/>из runonscience/ennonscience.db]
-    GET_COMMON_WORDS_NS --> CLEAN_DUPLICATES_NS[algo_cleaner<br/>Очистка от дубликатов<br/>через DSU + Levenshtein]
-    CLEAN_DUPLICATES_NS --> SAVE_CLEAN_WORDS_NS[insert_many_into_table<br/>Сохранение очищенных слов<br/>в базу non_science]
-    SAVE_CLEAN_WORDS_NS --> SAVE_DELETED_WORDS_NS[insert_many_into_table<br/>Сохранение удалённых слов<br/>в delete.db]
-    SAVE_DELETED_WORDS_NS --> CREATE_NS_TABLES[create_intersection_table +<br/>create_union_table<br/>Создание итоговых таблиц<br/>для non_science]
+    PROCESS_NON_SCIENCE --> EXTRACT_WORDS_NS[analysand_func_dict - Извлечение слов из книги]
+    EXTRACT_WORDS_NS --> READ_FILE_NS[get_txt_file - Чтение и предобработка TXT]
+    READ_FILE_NS --> CLEAN_TEXT_NS[removing_anomaly - Удаление цифр, коротких слов, вставка пробелов вокруг символов]
+    CLEAN_TEXT_NS --> LEMMATIZE_NS[parallel_lemmatize_mp - Параллельная лемматизация русского/английского текста]
+    LEMMATIZE_NS --> FIX_HYPHENS_NS[fix_hyphenated_words - Исправление перенесённых слов с дефисами и без]
+    FIX_HYPHENS_NS --> FILTER_COMMON_NS[Фильтрация слов - Исключение ОБЫЧНЫХ слов из базы non_science]
+    FILTER_COMMON_NS --> GET_COMMON_WORDS_NS[select_from_table - Получение обычных слов из runonscience/ennonscience.db]
+    GET_COMMON_WORDS_NS --> CLEAN_DUPLICATES_NS[algo_cleaner - Очистка от дубликатов через DSU + Levenshtein]
+    CLEAN_DUPLICATES_NS --> SAVE_CLEAN_WORDS_NS[insert_many_into_table - Сохранение очищенных слов в базу non_science]
+    SAVE_CLEAN_WORDS_NS --> SAVE_DELETED_WORDS_NS[insert_many_into_table - Сохранение удалённых слов в delete.db]
+    SAVE_DELETED_WORDS_NS --> CREATE_NS_TABLES[create_intersection_table + create_union_table - Создание итоговых таблиц для non_science]
 
     %% Второй проход - обработка научных текстов
-    CREATE_NS_TABLES --> SECOND_PASS[main(rootdir, 2)<br/>ВТОРОЙ ПРОХОД<br/>Обработка научных текстов<br/>с исключением слов из non_science]
-    SECOND_PASS --> CLEAN_NAMES_2[rename_files_in_directory<br/>Очистка имен PDF файлов]
-    CLEAN_NAMES_2 --> CONVERT_PDF_2[Цикл os.walk + pdf_to_txt<br/>Конвертация PDF → TXT<br/>для научных книг]
-    CONVERT_PDF_2 --> PROCESS_SCIENCE[reqursion<br/>Обработка TXT файлов науки]
+    CREATE_NS_TABLES --> SECOND_PASS[main rootdir, 2 - ВТОРОЙ ПРОХОД - Обработка научных текстов с исключением слов из non_science]
+    SECOND_PASS --> CLEAN_NAMES_2[rename_files_in_directory - Очистка имен PDF файлов]
+    CLEAN_NAMES_2 --> CONVERT_PDF_2[Цикл os.walk + pdf_to_txt - Конвертация PDF → TXT для научных книг]
+    CONVERT_PDF_2 --> PROCESS_SCIENCE[recursion - Обработка TXT файлов науки]
 
-    PROCESS_SCIENCE --> EXTRACT_WORDS_SC[analysand_func_dict<br/>Извлечение слов из научной книги]
-    EXTRACT_WORDS_SC --> READ_FILE_SC[get_txt_file<br/>Чтение и предобработка TXT]
-    READ_FILE_SC --> CLEAN_TEXT_SC[removing_anomaly<br/>Очистка текста от мусора]
-    CLEAN_TEXT_SC --> LEMMATIZE_SC[parallel_lemmatize_mp<br/>Лемматизация научного текста]
-    LEMMATIZE_SC --> FIX_HYPHENS_SC[fix_hyphenated_words<br/>Исправление переносов в научном тексте]
-    FIX_HYPHENS_SC --> FILTER_COMMON_SC[ВАЖНЫЙ ЭТАП ФИЛЬТРАЦИИ<br/>Исключение слов,<br/>которые УЖЕ ЕСТЬ в non_science<br/>чтобы остались только<br/>СПЕЦИФИЧЕСКИЕ научные термины]
-    FILTER_COMMON_SC --> GET_COMMON_WORDS_SC[select_from_table<br/>Запрос к runonscience.db<br/>или ennonscience.db<br/>в зависимости от языка книги]
-    GET_COMMON_WORDS_SC --> DETECT_LANGUAGE[detect_main_language<br/>Определение языка книги<br/>для выбора правильной БД]
-    DETECT_LANGUAGE --> CLEAN_DUPLICATES_SC[algo_cleaner<br/>Очистка от дубликатов<br/>в научных терминах]
-    CLEAN_DUPLICATES_SC --> SAVE_CLEAN_WORDS_SC[insert_many_into_table<br/>Сохранение научных терминов<br/>в базу соответствующей науки<br/>(math.db, physics.db, etc.)]
-    SAVE_CLEAN_WORDS_SC --> SAVE_DELETED_WORDS_SC[insert_many_into_table<br/>Сохранение объединённых слов<br/>в delete.db]
-    SAVE_DELETED_WORDS_SC --> CREATE_SCIENCE_TABLES[create_intersection_table +<br/>create_union_table<br/>Создание итоговых таблиц<br/>для научной категории]
+    PROCESS_SCIENCE --> EXTRACT_WORDS_SC[analysand_func_dict - Извлечение слов из научной книги]
+    EXTRACT_WORDS_SC --> READ_FILE_SC[get_txt_file - Чтение и предобработка TXT]
+    READ_FILE_SC --> CLEAN_TEXT_SC[removing_anomaly - Очистка текста от мусора]
+    CLEAN_TEXT_SC --> LEMMATIZE_SC[parallel_lemmatize_mp - Лемматизация научного текста]
+    LEMMATIZE_SC --> FIX_HYPHENS_SC[fix_hyphenated_words - Исправление переносов в научном тексте]
+    FIX_HYPHENS_SC --> FILTER_COMMON_SC[ВАЖНЫЙ ЭТАП ФИЛЬТРАЦИИ - Исключение слов, которые УЖЕ ЕСТЬ в non_science чтобы остались только СПЕЦИФИЧЕСКИЕ научные термины]
+    FILTER_COMMON_SC --> GET_COMMON_WORDS_SC[select_from_table - Запрос к runonscience.db или ennonscience.db в зависимости от языка книги]
+    GET_COMMON_WORDS_SC --> DETECT_LANGUAGE[detect_main_language - Определение языка книги для выбора правильной БД]
+    DETECT_LANGUAGE --> CLEAN_DUPLICATES_SC[algo_cleaner - Очистка от дубликатов в научных терминах]
+    CLEAN_DUPLICATES_SC --> SAVE_CLEAN_WORDS_SC[insert_many_into_table - Сохранение научных терминов в базу соответствующей науки math.db, physics.db, etc.]
+    SAVE_CLEAN_WORDS_SC --> SAVE_DELETED_WORDS_SC[insert_many_into_table - Сохранение объединённых слов в delete.db]
+    SAVE_DELETED_WORDS_SC --> CREATE_SCIENCE_TABLES[create_intersection_table + create_union_table - Создание итоговых таблиц для научной категории]
 
     %% Детали ключевых функций
-    subgraph ALGO_CLEANER_DETAILS["ПОДРОБНОСТИ algo_cleaner"]
+    subgraph ALGO_CLEANER_DETAILS[ПОДРОБНОСТИ algo_cleaner]
         DSU1[Группировка слов по длине]
-        DSU2[algo_DSU:<br/>- Поиск похожих слов<br/>- Расстояние Левенштейна<br/>- Объединение в группы]
-        DSU3[Суммирование частот<br/>объединённых слов]
-        DSU4[Сохранение информации<br/>об удалённых словах]
+        DSU2[algo_DSU: Поиск похожих слов - Расстояние Левенштейна - Объединение в группы]
+        DSU3[Суммирование частот объединённых слов]
+        DSU4[Сохранение информации об удалённых словах]
         DSU1 --> DSU2 --> DSU3 --> DSU4
     end
 
-    subgraph FIX_HYPHENATED_DETAILS["ПОДРОБНОСТИ fix_hyphenated_words"]
-        HYPH1[Удаление Unicode символов<br/>переноса (\xad, \u200b, etc.)]
-        HYPH2[Обработка переносов С дефисом:<br/>'од-\nнако' → 'однако']
-        HYPH3[Обработка переносов БЕЗ дефиса:<br/>'за\nграницей' → 'заграницей'<br/>(для коротких слов)]
-        HYPH4[Финальная очистка<br/>одиночных переносов строк]
+    subgraph FIX_HYPHENATED_DETAILS[ПОДРОБНОСТИ fix_hyphenated_words]
+        HYPH1[Удаление Unicode символов переноса xad, u200b, etc.]
+        HYPH2[Обработка переносов С дефисом: од- нако → однако]
+        HYPH3[Обработка переносов БЕЗ дефиса: за границей → заграницей для коротких слов]
+        HYPH4[Финальная очистка одиночных переносов строк]
         HYPH1 --> HYPH2 --> HYPH3 --> HYPH4
     end
 
-    subgraph LEMMATIZE_DETAILS["ПОДРОБНОСТИ parallel_lemmatize_mp"]
-        LEM1[split_into_paragraphs<br/>Разделение текста на абзацы]
-        LEM2[Параллельная обработка:<br/>lemmatize_ru_paragraph<br/>или lemmatize_en_paragraph]
-        LEM3[get_lemma с @lru_cache<br/>Кэшированная лемматизация<br/>через pymorphy3/spaCy]
-        LEM4[Объединение результатов<br/>всех абзацев]
+    subgraph LEMMATIZE_DETAILS[ПОДРОБНОСТИ parallel_lemmatize_mp]
+        LEM1[split_into_paragraphs - Разделение текста на абзацы]
+        LEM2[Параллельная обработка: lemmatize_ru_paragraph или lemmatize_en_paragraph]
+        LEM3[get_lemma с lru_cache - Кэшированная лемматизация через pymorphy3/spaCy]
+        LEM4[Объединение результатов всех абзацев]
         LEM1 --> LEM2 --> LEM3 --> LEM4
     end
 
-    subgraph REMOVING_ANOMALY_DETAILS["ПОДРОБНОСТИ removing_anomaly"]
-        CLEAN1[Удаление слов с цифрами<br/>и чистых чисел]
-        CLEAN2[Фильтрация по длине:<br/>убрать слова < 3 символов<br/>и > 17 символов]
-        CLEAN3[Вставка пробелов вокруг<br/>специальных символов<br/>в словах]
-        CLEAN4[Очистка от мягких переносов<br/>и других артефактов PDF]
+    subgraph REMOVING_ANOMALY_DETAILS[ПОДРОБНОСТИ removing_anomaly]
+        CLEAN1[Удаление слов с цифрами и чистых чисел]
+        CLEAN2[Фильтрация по длине: убрать слова меньше 3 символов и больше 17 символов]
+        CLEAN3[Вставка пробелов вокруг специальных символов в словах]
+        CLEAN4[Очистка от мягких переносов и других артефактов PDF]
         CLEAN1 --> CLEAN2 --> CLEAN3 --> CLEAN4
     end
 
-    subgraph INTERSECTION_DETAILS["ПОДРОБНОСТИ create_intersection_table"]
-        INTER1[Получение списка всех таблиц<br/>в научной БД]
-        INTER2[SQL UNION ALL всех таблиц<br/>с подсчётом частот слов]
-        INTER3[HAVING COUNT >= кол-во таблиц<br/>оставить только общие слова]
-        INTER4[Создание таблицы word_intersection<br/>с суммированными частотами]
+    subgraph INTERSECTION_DETAILS[ПОДРОБНОСТИ create_intersection_table]
+        INTER1[Получение списка всех таблиц в научной БД]
+        INTER2[SQL UNION ALL всех таблиц с подсчётом частот слов]
+        INTER3[HAVING COUNT больше или равно кол-во таблиц - оставить только общие слова]
+        INTER4[Создание таблицы word_intersection с суммированными частотами]
         INTER1 --> INTER2 --> INTER3 --> INTER4
     end
 
-    subgraph UNION_DETAILS["ПОДРОБНОСТИ create_union_table"]
-        UNION1[Получение списка таблиц<br/>исключая word_intersection]
-        UNION2[SQL UNION ALL всех таблиц<br/>с группировкой по словам]
-        UNION3[Суммирование частот<br/>всех уникальных слов]
-        UNION4[Создание таблицы global_union<br/>отсортированной по частоте]
+    subgraph UNION_DETAILS[ПОДРОБНОСТИ create_union_table]
+        UNION1[Получение списка таблиц исключая word_intersection]
+        UNION2[SQL UNION ALL всех таблиц с группировкой по словам]
+        UNION3[Суммирование частот всех уникальных слов]
+        UNION4[Создание таблицы global_union отсортированной по частоте]
         UNION1 --> UNION2 --> UNION3 --> UNION4
     end
 
@@ -112,8 +112,8 @@ flowchart TD
     CREATE_SCIENCE_TABLES -.-> UNION_DETAILS
 
     %% Финальные этапы
-    CREATE_SCIENCE_TABLES --> END_PROGRAM([КОНЕЦ ПРОГРАММЫ<br/>Вывод общего времени выполнения])
-    END_PROGRAM --> STATS[Статистика обработки:<br/>количество книг,<br/>время выполнения,<br/>размеры БД]
+    CREATE_SCIENCE_TABLES --> END_PROGRAM[КОНЕЦ ПРОГРАММЫ - Вывод общего времени выполнения]
+    END_PROGRAM --> STATS[Статистика обработки: количество книг, время выполнения, размеры БД]
 
     %% Стилизация
     classDef firstPass fill:#e1f5fe,stroke:#01579b
