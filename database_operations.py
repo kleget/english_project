@@ -84,11 +84,11 @@ def create_intersection_table_query(tables, db_path: Path, result_table: str = "
             CREATE TABLE {result_table} AS
             SELECT 
                 t.word,
-                SUM(t.count) as total_count
+                SUM(t.count) as count
             FROM ({union_counts}) t
             WHERE t.word IN ({intersection_words})
             GROUP BY t.word
-            ORDER BY total_count DESC
+            ORDER BY count DESC
         """
         cursor.execute(sum_query)
         conn.commit()
@@ -126,7 +126,7 @@ def create_union_table_query(tables, db_path: Path, result_table: str = "global_
             CREATE TABLE {result_table} (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 word TEXT NOT NULL,
-                total_count INTEGER NOT NULL,
+                count INTEGER NOT NULL,
                 translation TEXT
             )
         """)
@@ -134,10 +134,10 @@ def create_union_table_query(tables, db_path: Path, result_table: str = "global_
         # Собираем и суммируем все слова
         union_counts = ' UNION ALL '.join([f"SELECT word, count FROM {table}" for table in tables])
         cursor.execute(f"""
-            SELECT word, SUM(count) as total_count
+            SELECT word, SUM(count) as count
             FROM ({union_counts})
             GROUP BY word
-            ORDER BY total_count DESC
+            ORDER BY count DESC
         """)
         word_data = cursor.fetchall()
 
@@ -150,7 +150,7 @@ def create_union_table_query(tables, db_path: Path, result_table: str = "global_
         translations = translate_batch(words)
 
         # Вставляем в таблицу
-        insert_query = f"INSERT INTO {result_table} (word, total_count, translation) VALUES (?, ?, ?)"
+        insert_query = f"INSERT INTO {result_table} (word, count, translation) VALUES (?, ?, ?)"
         for (word, count), translation in zip(word_data, translations):
             cursor.execute(insert_query, (word, count, translation))
 

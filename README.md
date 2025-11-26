@@ -240,7 +240,7 @@ CREATE TABLE from_all_files (
 ```sql
 CREATE TABLE word_intersection (
     word TEXT,
-    total_count INTEGER
+    count INTEGER
 );
 ```
 
@@ -254,7 +254,7 @@ CREATE TABLE word_intersection (
 ```sql
 CREATE TABLE global_union (
     word TEXT,
-    total_count INTEGER
+    count INTEGER
 );
 ```
 
