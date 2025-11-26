@@ -105,6 +105,7 @@ def create_intersection_table_query(tables, db_path: Path, result_table: str = "
         return False
 
 
+
 def create_union_table_query(tables, db_path: Path, result_table: str = "global_union"):
     """
     Выполняет создание таблицы объединения в указанной БД.
@@ -120,27 +121,48 @@ def create_union_table_query(tables, db_path: Path, result_table: str = "global_
         # Удаляем старую таблицу
         cursor.execute(f"DROP TABLE IF EXISTS {result_table}")
 
-        # Объединяем все count по word
+        # Создаём новую с колонкой translation
+        cursor.execute(f"""
+            CREATE TABLE {result_table} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                word TEXT NOT NULL,
+                total_count INTEGER NOT NULL,
+                translation TEXT
+            )
+        """)
+
+        # Собираем и суммируем все слова
         union_counts = ' UNION ALL '.join([f"SELECT word, count FROM {table}" for table in tables])
-        union_query = f"""
-            CREATE TABLE {result_table} AS
-            SELECT 
-                word,
-                SUM(count) as total_count
+        cursor.execute(f"""
+            SELECT word, SUM(count) as total_count
             FROM ({union_counts})
             GROUP BY word
             ORDER BY total_count DESC
-        """
-        cursor.execute(union_query)
+        """)
+        word_data = cursor.fetchall()
+
+        # Извлекаем слова
+        words = [row[0] for row in word_data]
+
+        # Переводим
+        from translation_utils import translate_batch
+        print(f"🔁 Начинаем перевод {len(words)} слов...")
+        translations = translate_batch(words)
+
+        # Вставляем в таблицу
+        insert_query = f"INSERT INTO {result_table} (word, total_count, translation) VALUES (?, ?, ?)"
+        for (word, count), translation in zip(word_data, translations):
+            cursor.execute(insert_query, (word, count, translation))
+
         conn.commit()
 
         total = cursor.execute(f"SELECT COUNT(*) FROM {result_table}").fetchone()[0]
-        print(f"Создана таблица {result_table} с {total} уникальными словами.")
+        print(f"✅ Таблица '{result_table}' создана. Слов с переводами: {total}")
         conn.close()
         return True
 
     except Exception as e:
-        print(f"Ошибка при создании объединения: {e}")
+        print(f"❌ Ошибка при создании таблицы объединения: {e}")
         conn.rollback()
         conn.close()
         return False

@@ -8,7 +8,7 @@ import time
 from config import *
 import Levenshtein
 from collections import defaultdict
-from create_non_science_db import*
+from database_aggregation import*
 from colorama import init
 from termcolor import colored
 
