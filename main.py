@@ -15,6 +15,28 @@ from termcolor import colored
 # начальное время
 start_time = time.time()
 
+
+
+def initialize_all_databases():
+    """
+    Создаёт необходимые таблицы в каждой БД заранее.
+    """
+    # Категории научных книг
+    categories = ['code', 'ennonscience', 'runonscience']  # ← укажи свои
+    for cat in categories:
+        create_processed_books_table(cat)
+
+    # non_science БД
+    create_processed_books_table('ennonscience')
+    create_processed_books_table('runonscience')
+
+    # БД для удалённых слов
+    create_processed_books_table('delete')
+
+    print("✅ Все таблицы processed_books инициализированы")
+
+
+
 def print_all_files_from_rootdir():
     structure = get_directory_structure(rootdir)
     all_folders = get_all_folders(structure)
@@ -28,50 +50,54 @@ def print_all_files_from_rootdir():
     return list_all_files_from_rootdir
 
 
-def reqursion(all_files_from_rootdir, start_num):
-    # scinence_word = {} # это все слова из всех файлов, не по отдельности, а именно все вообще научные слова из папки
-    # basik_words = {}
-    '''это просто все слова, обычные, по хорошему они должны быть статические и в БД, а не каждый раз собирать их из множества книг'''
 
+def reqursion(all_files_from_rootdir, start_num):
     for y in all_files_from_rootdir:
         if type(y) == list:
-
             reqursion(y, start_num)
         else:
             if '.txt' in y:
-                if (start_num == 1 and 'non_science' in y) or (start_num != 1 and 'non_science' not in y): # это надо чтобы мы не удаляли грязные файлы science после того как первый раз запустили код и получили файлы non_science
-                    scinence_word = {}
+                if (start_num == 1 and 'non_science' in y) or (start_num != 1 and 'non_science' not in y):
                     clear_book_name = re.sub(r'[^a-zA-Z0-9а-яА-ЯёЁ/]', '', y.split('.')[0], flags=re.IGNORECASE)
-                    A = analysand_func_dict(y.replace('.txt', ''))  # получаем массив НЕ отсортированных готовых данных из книги
-                    try: # этот блок отработает при втором запуске, так как при первом табллиц nonscience еще нет либо они пусты
+                    db_name = clear_book_name.split('/')[0]
+
+                    # === ПРОВЕРКА: уже обработана? ===
+                    if is_book_processed(db_name, y):
+                        print(colored(f"⏭️ Пропуск: {y[:30]} — уже обработана", 'yellow'))
+                        continue
+
+                    # === ОСНОВНАЯ ЛОГИКА ===
+                    scinence_word = {}
+                    A = analysand_func_dict(y.replace('.txt', ''))
+
+                    try:
                         lang_current_book = detect_main_language(f"E:/Code/english_project/book/txt/{y}")
-                        if lang_current_book =='ru':
-                            B = select_from_table('runonscience', "SELECT word FROM global_union")
-                        elif lang_current_book =='en':
-                            B = select_from_table('ennonscience', "SELECT word FROM global_union")
-                            '''B = select_from_table(clear_book_name.split('/')[0], f"SELECT word FROM {clear_book_name.split('/')[1]}")  
-                            B - это обычные слова, А - это специальные слова
-                            тут вы выбираем все слова из научной базы для дальнейшего сравнения с non_science.db
-                            если это первый запускт, то блок try не отработает, ибо файлы бд по наукам пустые
-                            при втором запуске уже В будет состоять из данных из файла'''
-                    except: 
+                        nonscience_db = 'runonscience' if lang_current_book == 'ru' else 'ennonscience'
+                        B = select_from_table(nonscience_db, "SELECT word FROM global_union")
+                    except:
                         B = ['']
-                        print('NO')
-                    for w in A:  # тут мы проверяем, чтобы в scinence_word попали только те слова, которых нет в обычной книге
+
+                    for w in A:
                         if (w not in B) and (w != '') and (w != "''"):
                             scinence_word[w] = A[w]
 
                     sorted_analysand = sorted(scinence_word.items(), key=lambda item: item[1], reverse=True)
                     sorted_analysand, list_del = algo_cleaner(sorted_analysand)
 
-                    print('Book: ', y[:20:], "Count: ", len(sorted_analysand), 'del: ', len(list_del))
+                    # === СОХРАНЕНИЕ ===
+                    table_name = clear_book_name.split('/')[1]
+                    insert_many_into_table(db_name, table_name, sorted_analysand)
                     insert_many_into_table('delete', 'from_all_files', list_del)
-                    insert_many_into_table(*clear_book_name.split('/'), sorted_analysand) # тут записываем окончательный набор данных в БД
+
+                    # === ОТМЕТИТЬ КАК ОБРАБОТАННУЮ ===
+                    mark_book_as_processed(db_name, y, len(sorted_analysand))
+                    print(colored(f"✅ Обработана: {y[:30]} | Слов: {len(sorted_analysand)}", 'green'))
+
+                    # === ОБНОВИТЬ АГРЕГАЦИИ ПОСЛЕ КАЖДОЙ КНИГИ ===
                     if y == all_files_from_rootdir[-1]:
-                        # короче если мы обработали последний файл из научной папки, значит находим пересечение и объедение всех бд
-                        print(f"=== Обработка {y.split('/')[0]} ===")
-                        create_intersection_table(db_name=f"{clear_book_name.split('/')[0]}.db")
-                        create_union_table(db_name=f"{clear_book_name.split('/')[0]}.db")
+                        print(f"=== Обновление агрегаций для {db_name} ===")
+                        create_intersection_table(db_name=f"{db_name}.db")
+                        create_union_table(db_name=f"{db_name}.db")
 
 
 def algo_cleaner(sorted_analysand):
@@ -246,6 +272,7 @@ def main(rootdir, start_num):
 
 
 if __name__ == "__main__":
+    initialize_all_databases()  # ← ДОБАВЬ ЭТУ СТРОКУ
     main(rootdir, 1) # это чтобы мы сформировали файлы non_scienct
 
     main(rootdir, 2) # а это чтобы файылы с науками были чистыми

@@ -369,3 +369,45 @@ def get_word_with_translation(cursor, word: str, union_table: str = "global_unio
         WHERE u.word = ?
     """, (word,))
     return cursor.fetchone()
+
+
+
+# database_operations.py — добавить функцию
+def create_processed_books_table(db_name: str):
+    db_path = Path('database') / f"{db_name}.db"
+    with sq.connect(db_path) as con:
+        cursor = con.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS processed_books (
+                book_path TEXT PRIMARY KEY,
+                processed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                word_count INTEGER,
+                hash TEXT  -- можно добавить позже для проверки изменений
+            )
+        """)
+        con.commit()
+
+
+# database_operations.py
+def is_book_processed(db_name: str, book_path: str) -> bool:
+    """Проверяет, была ли книга уже обработана."""
+    db_path = Path('database') / f"{db_name}.db"
+    try:
+        with sq.connect(db_path) as con:
+            cursor = con.cursor()
+            cursor.execute("SELECT 1 FROM processed_books WHERE book_path = ?", (book_path,))
+            return cursor.fetchone() is not None
+    except:
+        return False  # если таблицы нет — значит, не обрабатывалась
+
+
+def mark_book_as_processed(db_name: str, book_path: str, word_count: int):
+    """Добавляет запись о том, что книга обработана."""
+    db_path = Path('database') / f"{db_name}.db"
+    with sq.connect(db_path) as con:
+        cursor = con.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO processed_books (book_path, word_count)
+            VALUES (?, ?)
+        """, (book_path, word_count))
+        con.commit()
