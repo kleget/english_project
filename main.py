@@ -29,7 +29,7 @@ def print_all_files_from_rootdir():
 
 
 def reqursion(all_files_from_rootdir, start_num):
-    # scinence_word = {} # это все слова из всех файлов, не по отдельности, а именно все вообще математические слов
+    # scinence_word = {} # это все слова из всех файлов, не по отдельности, а именно все вообще научные слова из папки
     # basik_words = {}
     '''это просто все слова, обычные, по хорошему они должны быть статические и в БД, а не каждый раз собирать их из множества книг'''
 
@@ -49,12 +49,11 @@ def reqursion(all_files_from_rootdir, start_num):
                             B = select_from_table('runonscience', "SELECT word FROM global_union")
                         elif lang_current_book =='en':
                             B = select_from_table('ennonscience', "SELECT word FROM global_union")
-                            # B = select_from_table(clear_book_name.split('/')[0], f"SELECT word FROM {clear_book_name.split('/')[1]}")  
-                        # B - это обычные слова, А - это специальные слова
-                        # тут вы выбираем все слова из научной базы для дальнейшего сравнения с non_science.db
-                        # если это первый запускт, то блок try не отработает, ибо файлы бд по наукам пустые
-                        # при втором запуске уже В будет состоять из данных из файла 
-                        # TODO тут должно быть B - выбор из баз non science, а не clear_book_name
+                            '''B = select_from_table(clear_book_name.split('/')[0], f"SELECT word FROM {clear_book_name.split('/')[1]}")  
+                            B - это обычные слова, А - это специальные слова
+                            тут вы выбираем все слова из научной базы для дальнейшего сравнения с non_science.db
+                            если это первый запускт, то блок try не отработает, ибо файлы бд по наукам пустые
+                            при втором запуске уже В будет состоять из данных из файла'''
                     except: 
                         B = ['']
                         print('NO')
@@ -238,9 +237,7 @@ def main(rootdir, start_num):
     # перебираем все дерево файлов rootdir и все файлы .pdf конвертируем в .txt с помощью pdf_to_txt()
     for root, dirs, files in os.walk(rootdir):
         if files:  # Если в папке есть файлы
-            root = root.replace('\\', '/')# Выводим путь к папке
-            # print(root)  # ну это своеобразный индикатор, того, какую папку мы проходим и какие файлы обрабатываем сейчас.
-
+            root = root.replace('\\', '/')  # путь к папке
             for file in files:
                 if '/txt/' not in root:
                     pdf_to_txt(root, file)
@@ -249,14 +246,7 @@ def main(rootdir, start_num):
 
 
 if __name__ == "__main__":
-    #мне очень непонятно, нахуя я написал эту ебанистику
-
     main(rootdir, 1) # это чтобы мы сформировали файлы non_scienct
-
-    # os.remove("database/biology.db")
-    # os.remove("database/code.db")
-    # os.remove("database/math.db")
-    # os.remove("database/physics.db")
 
     main(rootdir, 2) # а это чтобы файылы с науками были чистыми
 

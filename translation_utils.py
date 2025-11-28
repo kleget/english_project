@@ -2,7 +2,7 @@
 import requests
 import time
 from pathlib import Path
-from secret_data import API_KEY, FOLDER_ID
+from secret_data import *
 
 # === Ваши данные ===
 URL = "https://translate.api.cloud.yandex.net/translate/v2/translate"
@@ -19,82 +19,56 @@ def detect_language(word: str) -> str:
     return "ru" if any('а' <= c.lower() <= 'я' for c in word) else "en"
 
 
-# translation_utils.py — обновлённая функция
-
-def translate_batch(words: list, max_chars: int = 9900) -> list:
+def translate_batch(words: list, batch_size: int = 800) -> list:
     """
-    Переводит список слов, группируя их в батчи так, чтобы суммарное количество символов
-    в 'texts' не превышало max_chars (ограничение Yandex Translate API — 10 000).
-    Каждое слово переводится на противоположный язык.
+    Переводит список слов пакетно, группируя по направлению перевода (ru→en, en→ru).
     """
-    translations = []
-    i = 0
+    translations = ["—"] * len(words)  # заглушка на случай ошибки
+    word_to_index = {}  # чтобы сохранить порядок
 
-    while i < len(words):
-        batch = []
-        batch_texts = []
-        current_length = 0
-        target_languages = []
+    # Группируем слова по индексам и языкам
+    en_batch = []  # en → ru
+    ru_batch = []  # ru → en
+    en_indices = []
+    ru_indices = []
 
-        # Формируем батч, пока не превысим лимит
-        while i < len(words):
-            word = words[i].strip()
-            word_len = len(word)
-
-            # Проверяем, поместится ли это слово
-            if current_length + word_len > max_chars:
-                if not batch:  # Принудительно добавляем, даже если одно слово > 10к
-                    batch.append(word)
-                    batch_texts.append(word)
-                    src_lang = detect_language(word)
-                    target_lang = "en" if src_lang == "ru" else "ru"
-                    target_languages.append(target_lang)
-                    i += 1
-                break
-
-            batch.append(word)
-            batch_texts.append(word)
-            src_lang = detect_language(word)
-            target_lang = "en" if src_lang == "ru" else "ru"
-            target_languages.append(target_lang)
-            current_length += word_len
-            i += 1
-
-        # Определяем целевой язык
-        if len(set(target_languages)) == 1:
-            # Все слова в батче идут в один язык
-            data = {
-                "folderId": FOLDER_ID,
-                "texts": batch_texts,
-                "targetLanguageCode": target_languages[0]
-            }
-            try:
-                response = requests.post(URL, headers=HEADERS, json=data)
-                response.raise_for_status()
-                result = response.json()
-                translations += [item["text"] for item in result["translations"]]
-            except Exception as e:
-                print(f"❌ Ошибка при переводе батча: {e}")
-                translations += ["—"] * len(batch_texts)
+    for i, word in enumerate(words):
+        word_to_index[word] = i
+        src_lang = detect_language(word)
+        if src_lang == "ru":
+            ru_batch.append(word)
+            ru_indices.append(i)
         else:
-            # Разные языки — отправляем по одному
-            for word, tgt_lang in zip(batch, target_languages):
-                single_data = {
-                    "folderId": FOLDER_ID,
-                    "texts": [word],
-                    "targetLanguageCode": tgt_lang
-                }
-                try:
-                    response = requests.post(URL, headers=HEADERS, json=single_data)
-                    response.raise_for_status()
-                    result = response.json()
-                    translations.append(result["translations"][0]["text"])
-                except Exception as e:
-                    print(f"❌ Не удалось перевести '{word}': {e}")
-                    translations.append("—")
+            en_batch.append(word)
+            en_indices.append(i)
 
-        # Пауза между запросами для безопасности
-        time.sleep(0.1)
-    print("Перевод завершен!")
+    # Вспомогательная функция для перевода пачки
+    def send_batch(texts, target_lang, indices):
+        if not texts:
+            return
+        data = {
+            "folderId": FOLDER_ID,
+            "texts": texts,
+            "targetLanguageCode": target_lang
+        }
+        try:
+            response = requests.post(URL, headers=HEADERS, json=data)
+            response.raise_for_status()
+            result = response.json()
+            for idx, translation in zip(indices, result["translations"]):
+                translations[idx] = translation["text"]
+        except Exception as e:
+            print(f"❌ Ошибка при переводе {len(texts)} слов ({target_lang}): {e}")
+            for idx in indices:
+                translations[idx] = "—"
+
+    # Отправляем пачки (разбиваем на подбатчи по batch_size)
+    for i in range(0, len(ru_batch), batch_size):
+        send_batch(ru_batch[i:i+batch_size], "en", ru_indices[i:i+batch_size])
+
+    for i in range(0, len(en_batch), batch_size):
+        send_batch(en_batch[i:i+batch_size], "ru", en_indices[i:i+batch_size])
+
+    # Пауза после всех запросов
+    time.sleep(0.1)
     return translations
-
