@@ -19,7 +19,7 @@ def create_intersection_table(db_name, result_table: str = "word_intersection"):
 
     with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name != 'processed_books'")
         tables = [row[0] for row in cursor.fetchall() if row[0] not in [result_table]]
 
     if len(tables) < 2:
@@ -41,7 +41,7 @@ def create_union_table(db_name, result_table: str = "global_union"):
 
     with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name != 'processed_books'")
         tables = [row[0] for row in cursor.fetchall() if row[0] not in [result_table, "word_intersection"]]
 
     if not tables:
