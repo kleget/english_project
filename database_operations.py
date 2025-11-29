@@ -122,13 +122,14 @@ def create_translations_table(cursor, table_name: str = "translations"):
 
 
 def create_union_table_query(tables, db_path: Path, result_table: str = "global_union", 
-                             translation_threshold: float = 0.25):
+                             translation_threshold: float = 0.6):
     """
     Выполняет создание таблицы объединения в указанной БД.
     Переводы хранятся в отдельной таблице translations только для часто используемых слов.
     
-    :param translation_threshold: Доля слов для перевода (0.25 = топ 25%)
+    :param translation_threshold: Target share of total token frequency to cover with translations (0.6 = 60% of usage)
     """
+    # translation_threshold задаёт долю всех вхождений, которую должны покрывать переведённые слова.
     if not db_path.exists():
         print(f"Файл базы данных {db_path} не найден!")
         return False
@@ -166,12 +167,62 @@ def create_union_table_query(tables, db_path: Path, result_table: str = "global_
         insert_query = f"INSERT INTO {result_table} (word, count) VALUES (?, ?)"
         cursor.executemany(insert_query, word_data)
 
-        # Определяем количество слов для перевода (топ N по частоте)
-        total_words = len(word_data)
-        words_to_translate_count = max(1, int(total_words * translation_threshold))
-        frequent_words_data = word_data[:words_to_translate_count]
-        frequent_words = [row[0] for row in frequent_words_data]
+        # Выбираем кандидатов на перевод, ориентируясь на реально популярные слова
+        def pick_popular_words(data, coverage_ratio=0.6, min_ratio=0.05, max_ratio=0.4, min_count=5):
+            if not data:
+                return []
+
+            total_unique = len(data)
+            total_occurrences = sum(item[1] for item in data)
+            if total_occurrences == 0:
+                return data[:max(1, int(total_unique * min_ratio))]
+
+            # min_ratio/max_ratio ограничивают долю слов, а coverage_ratio отвечает за долю частоты
+            min_words = max(1, int(total_unique * min_ratio))
+            max_words = max(min_words, int(total_unique * max_ratio))
+            coverage_target = max(0.1, min(0.95, coverage_ratio))
+
+            cumulative = 0
+            cutoff_count = data[-1][1]
+            selected = []
+
+            for idx, row in enumerate(data):
+                selected.append(row)
+                cumulative += row[1]
+                cutoff_count = row[1]
+
+                # Останавливаемся, когда достигли нужного покрытия или упёрлись в лимиты
+                if idx + 1 >= min_words and cumulative >= total_occurrences * coverage_target:
+                    break
+                if idx + 1 >= max_words:
+                    break
+
+            # Отсеиваем всё, что реже минимального порога
+            effective_cutoff = max(cutoff_count, min_count)
+            popular = [row for row in data if row[1] >= effective_cutoff]
+
+            # Сохраняем количество слов в рамках заданных границ
+            if len(popular) > max_words:
+                popular = popular[:max_words]
+            if len(popular) < min_words:
+                popular = data[:min_words]
+
+            return popular
         
+        ''' min_ratio и max_ratio задают минимальную и максимальную долю слов, 
+            которые вообще могут попасть в список на перевод. 
+            Сейчас это 5% и 40% соответственно — даже если слов мало или очень много, 
+            мы не выйдем за эти рамки.'''
+
+        frequent_words_data = pick_popular_words(
+            word_data,
+            coverage_ratio=translation_threshold,
+            min_ratio=0.05,
+            max_ratio=0.4,
+            min_count=5
+        )
+        frequent_words = [row[0] for row in frequent_words_data]
+
         # Создаём словарь для быстрого поиска count по слову
         word_to_count = {word: count for word, count in frequent_words_data}
 
@@ -411,3 +462,4 @@ def mark_book_as_processed(db_name: str, book_path: str, word_count: int):
             VALUES (?, ?)
         """, (book_path, word_count))
         con.commit()
+
