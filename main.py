@@ -4,6 +4,7 @@ from database_operations import *
 from file_processing import *
 from text_analysis import *
 import os
+import re
 import time
 from config import *
 import Levenshtein
@@ -19,22 +20,37 @@ start_time = time.time()
 
 def initialize_all_databases():
     """
-    Создаёт необходимые таблицы в каждой БД заранее.
+    Initialize processed_books tables for every category found under book/txt.
     """
-    # Категории научных книг
-    categories = ['code', 'ennonscience', 'runonscience']  # ← укажи свои
-    for cat in categories:
-        create_processed_books_table(cat)
+    txt_root = os.path.join(rootdir, "txt")
+    if not os.path.isdir(txt_root):
+        print(colored(f"Directory not found: {txt_root}", "red"))
+        return
 
-    # non_science БД
-    create_processed_books_table('ennonscience')
-    create_processed_books_table('runonscience')
+    os.makedirs("database", exist_ok=True)
 
-    # БД для удалённых слов
-    create_processed_books_table('delete')
+    def normalize_category(name: str) -> str:
+        # Strip separators so DB names match the ones used during processing (e.g. en_non_science -> ennonscience)
+        return re.sub(r"[^a-zA-Z0-9\u0400-\u04FF]", "", name)
 
-    print("✅ Все таблицы processed_books инициализированы")
+    raw_categories = [
+        entry for entry in os.listdir(txt_root)
+        if os.path.isdir(os.path.join(txt_root, entry))
+    ]
 
+    categories = sorted({
+        normalized for entry in raw_categories
+        if (normalized := normalize_category(entry))
+    })
+
+    if not categories:
+        print(colored(f"No categories found under: {txt_root}", "yellow"))
+        return
+
+    for category in categories:
+        create_processed_books_table(category)
+
+    print(colored(f"processed_books ready: {', '.join(categories)}", "green"))
 
 
 def print_all_files_from_rootdir():
