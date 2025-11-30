@@ -5,6 +5,9 @@ import os
 from pathlib import Path
 from translation_utils import translate_batch
 
+# Ensure base database directory exists before any operations
+Path('database').mkdir(exist_ok=True)
+
 
 def create_table(db_name: str, table_name: str):
     if not os.path.exists('database'):
@@ -240,13 +243,13 @@ def create_union_table_query(tables, db_path: Path, result_table: str = "global_
             translations_list = translate_batch(words_to_translate)
             
             if translations_list and len(translations_list) == len(words_to_translate):
-                new_translations = {
-                    word: trans 
-                    for word, trans in zip(words_to_translate, translations_list) 
-                    if trans and trans != "—"
-                }
                 
-                # Сохраняем новые переводы в глобальный кэш (для использования другими БД)
+                new_translations = {
+                    word: trans
+                    for word, trans in zip(words_to_translate, translations_list)
+                    if trans and trans != '""' and trans.strip() and trans.lower() != word.lower()
+                }
+# Сохраняем новые переводы в глобальный кэш (для использования другими БД)
                 save_to_global_translations_cache(new_translations)
                 print(f"💾 Сохранено {len(new_translations)} переводов в глобальный кэш")
             else:
@@ -268,9 +271,9 @@ def create_union_table_query(tables, db_path: Path, result_table: str = "global_
             # Вставляем все переводы с актуальным count
             translation_insert = "INSERT INTO translations (word, count, translation) VALUES (?, ?, ?)"
             translation_data = [
-                (word, word_to_count[word], trans) 
+                (word, word_to_count[word], trans)
                 for word, trans in all_translations.items()
-                if word in word_to_count
+                if word in word_to_count and trans and trans.lower() != word.lower()
             ]
             if translation_data:
                 cursor.executemany(translation_insert, translation_data)
@@ -362,10 +365,12 @@ def get_cached_translations(words: list, use_global_cache: bool = True) -> dict:
             WHERE word IN ({placeholders})
         """, words)
         
-        result = {row[0]: row[1] for row in cursor.fetchall()}
+        rows = cursor.fetchall()
+        # Отбрасываем пустые и тождественные переводы (word == translation), чтобы дать шанс получить нормальный перевод
+        result = {w: t for w, t in rows if t and t.strip() and t.lower() != w.lower()}
     finally:
         conn.close()
-    
+
     return result
 
 
@@ -395,12 +400,12 @@ def save_to_global_translations_cache(translations: dict):
         # 2. translation → word (например: "привет" → "hello")
         translation_data = []
         for word, trans in translations.items():
-            if trans and trans != "—":
-                # Прямое направление: word → translation
-                translation_data.append((word, trans))
-                # Обратное направление: translation → word
+            if not trans or trans == '""' or trans.lower() == word.lower():
+                continue
+            translation_data.append((word, trans))
+            if trans.lower() != word.lower():
                 translation_data.append((trans, word))
-        
+
         if translation_data:
             cursor.executemany(insert_query, translation_data)
             conn.commit()
@@ -410,8 +415,7 @@ def save_to_global_translations_cache(translations: dict):
 
 def get_word_with_translation(cursor, word: str, union_table: str = "global_union"):
     """
-    Получает слово из global_union с переводом (если есть).
-    Возвращает (word, count, translation) или None.
+    Возвращает слово и перевод из union_table + translations (если есть).
     """
     cursor.execute(f"""
         SELECT u.word, u.count, t.translation
@@ -422,8 +426,7 @@ def get_word_with_translation(cursor, word: str, union_table: str = "global_unio
     return cursor.fetchone()
 
 
-
-# database_operations.py — добавить функцию
+# database_operations.py — служебные таблицы
 def create_processed_books_table(db_name: str):
     db_path = Path('database') / f"{db_name}.db"
     with sq.connect(db_path) as con:
@@ -433,27 +436,28 @@ def create_processed_books_table(db_name: str):
                 book_path TEXT PRIMARY KEY,
                 processed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 word_count INTEGER,
-                hash TEXT  -- можно добавить позже для проверки изменений
+                hash TEXT
             )
         """)
         con.commit()
 
 
-# database_operations.py
 def is_book_processed(db_name: str, book_path: str) -> bool:
-    """Проверяет, была ли книга уже обработана."""
+    """Return True if the book_path is already marked as processed."""
     db_path = Path('database') / f"{db_name}.db"
     try:
+        create_processed_books_table(db_name)  # ensure processed_books exists
         with sq.connect(db_path) as con:
             cursor = con.cursor()
             cursor.execute("SELECT 1 FROM processed_books WHERE book_path = ?", (book_path,))
             return cursor.fetchone() is not None
-    except:
-        return False  # если таблицы нет — значит, не обрабатывалась
+    except Exception:
+        return False
 
 
 def mark_book_as_processed(db_name: str, book_path: str, word_count: int):
-    """Добавляет запись о том, что книга обработана."""
+    """Record completion of a book with its word_count."""
+    create_processed_books_table(db_name)  # ensure processed_books exists
     db_path = Path('database') / f"{db_name}.db"
     with sq.connect(db_path) as con:
         cursor = con.cursor()
@@ -462,4 +466,3 @@ def mark_book_as_processed(db_name: str, book_path: str, word_count: int):
             VALUES (?, ?)
         """, (book_path, word_count))
         con.commit()
-

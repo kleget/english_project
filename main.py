@@ -45,7 +45,7 @@ def initialize_all_databases():
 
     if not categories:
         print(colored(f"No categories found under: {txt_root}", "yellow"))
-        return
+        # return
 
     for category in categories:
         create_processed_books_table(category)
@@ -87,10 +87,11 @@ def reqursion(all_files_from_rootdir, start_num):
                     A = analysand_func_dict(y.replace('.txt', ''))
 
                     try:
-                        lang_current_book = detect_main_language(f"E:/Code/english_project/book/txt/{y}")
-                        nonscience_db = 'runonscience' if lang_current_book == 'ru' else 'ennonscience'
-                        B = select_from_table(nonscience_db, "SELECT word FROM global_union")
-                    except:
+                        # Берем стоп-слова сразу из обеих баз (ru/en), т.к. книга может содержать смешанный язык
+                        stop_ru = select_from_table('runonscience', "SELECT word FROM global_union")
+                        stop_en = select_from_table('ennonscience', "SELECT word FROM global_union")
+                        B = list(set(stop_ru) | set(stop_en))
+                    except Exception:
                         B = ['']
 
                     for w in A:
@@ -117,7 +118,30 @@ def reqursion(all_files_from_rootdir, start_num):
 
 
 def algo_cleaner(sorted_analysand):
-#####################################   ПОНЯТНО  #####################################
+#####################################   CLEANUP  #####################################
+    """
+    Group similar words conservatively and sum frequencies.
+    - ignore very short words
+    - strict length and Levenshtein thresholds
+    - validate similarity against the cluster head to avoid transitive merges
+    """
+
+    MIN_LEN_FOR_MERGE = 5
+    MAX_LEN_DIFF = 1
+    MAX_ABS_DIST = 2
+    MAX_REL_DIST = 0.25
+
+    def is_similar(main_word, other_word):
+        dist = Levenshtein.distance(main_word, other_word)
+        max_len = max(len(main_word), len(other_word))
+        if abs(len(main_word) - len(other_word)) > MAX_LEN_DIFF:
+            return False
+        if dist > MAX_ABS_DIST:
+            return False
+        if max_len and dist / max_len > MAX_REL_DIST:
+            return False
+        return True
+
     def find_dsu(u):
         while parent[u] != u:
             parent[u] = parent[parent[u]]
@@ -127,12 +151,11 @@ def algo_cleaner(sorted_analysand):
     length_groups = defaultdict(list)
     for idx, item in enumerate(sorted_analysand):
         s = item[0]
-        if len(s) >= 4:
+        if len(s) >= MIN_LEN_FOR_MERGE:
             length_groups[len(s)].append(idx)
-   # Вызов DSU
+    # Build DSU with tightened constraints
     parent, rank = algo_DSU(sorted_analysand, length_groups)
 
-    # Формирование результата и списка удаленных элементов
     groups = defaultdict(list)
     list_del = []
 
@@ -146,19 +169,21 @@ def algo_cleaner(sorted_analysand):
 
         main_idx = group[0]
         main_item = sorted_analysand[main_idx]
+        main_word = main_item[0]
+        main_total = int(main_item[1])
 
-        # Добавляем информацию об удаленных элементах
         for del_idx in group[1:]:
             del_item = sorted_analysand[del_idx]
-            list_del.append([
-                del_item[0],
-                str(del_item[1]),  # Сохраняем оригинальный строковый формат
-                main_item[0]
-            ])
+            del_word, del_count = del_item[0], int(del_item[1])
 
-        # Суммируем значения и возвращаем строковый формат
-        total = sum(sorted_analysand[idx][1] for idx in group) # cколько раз замержили, окажется в колонке count в DB
-        result.append([main_item[0], str(total)])
+            if is_similar(main_word, del_word):
+                list_del.append([del_word, str(del_count), main_word])
+                main_total += del_count
+            else:
+                # keep distant words as separate entries
+                result.append([del_word, str(del_count)])
+
+        result.append([main_word, str(main_total)])
 
     return result, list_del
 
@@ -168,14 +193,18 @@ def algo_DSU(sorted_analysand, length_groups):
     parent = list(range(n))
     rank = [1] * n
     processed = set()
-    
-    # Итеративная реализация find с path compression
+    PREFIX_LEN = 4
+    MAX_LEN_DIFF = 1
+    MAX_ABS_DIST = 2
+    MAX_REL_DIST = 0.25
+
+    # Find with path compression
     def find(u):
         while parent[u] != u:
             parent[u] = parent[parent[u]]  # Path compression
             u = parent[u]
         return u
-    
+
     def union(u, v):
         u_root = find(u)
         v_root = find(v)
@@ -187,91 +216,76 @@ def algo_DSU(sorted_analysand, length_groups):
             parent[v_root] = u_root
             if rank[u_root] == rank[v_root]:
                 rank[u_root] += 1
-    
-    # Предварительно извлекаем слова, их длины и префиксы
+
     words = [word for word, _ in sorted_analysand]
     lengths = [len(word) for word in words]
-    prefixes = [word[:3] if len(word) >= 3 else word for word in words]
-    
-    # Создаем кэш расстояний
+    prefixes = [word[:PREFIX_LEN] if len(word) >= PREFIX_LEN else word for word in words]
+
     distance_cache = {}
-    
-    # Сортируем длины для обработки
     sorted_lengths = sorted(length_groups.keys())
-    
-    # Обрабатываем каждую длину
+
+    def close_enough(i, j):
+        s1, s2 = words[i], words[j]
+        len1, len2 = lengths[i], lengths[j]
+        if abs(len1 - len2) > MAX_LEN_DIFF:
+            return False
+        cache_key = tuple(sorted((s1, s2)))
+        if cache_key not in distance_cache:
+            distance_cache[cache_key] = Levenshtein.distance(s1, s2)
+        dist = distance_cache[cache_key]
+        if dist > MAX_ABS_DIST:
+            return False
+        if dist / max(len1, len2) > MAX_REL_DIST:
+            return False
+        return True
+
     for l in sorted_lengths:
         current_group = length_groups[l]
-        # Группируем текущую группу по префиксам
         current_prefix_map = defaultdict(list)
         for idx in current_group:
             current_prefix_map[prefixes[idx]].append(idx)
-        
-        # Обрабатываем пары внутри текущей группы
+
+        # Within same length
         for prefix, indices in current_prefix_map.items():
             num_indices = len(indices)
             for i in range(num_indices):
                 idx1 = indices[i]
-                s1 = words[idx1]
-                len1 = lengths[idx1]
                 for j in range(i + 1, num_indices):
                     idx2 = indices[j]
-                    s2 = words[idx2]
-                    len2 = lengths[idx2]
-                    if abs(len1 - len2) > LEN_LEVENSHTEIN:
-                        continue
                     pair = tuple(sorted((idx1, idx2)))
                     if pair in processed:
                         continue
-                    # Используем отсортированные слова для кэша
-                    cache_key = tuple(sorted((s1, s2)))
-                    if cache_key not in distance_cache:
-                        distance_cache[cache_key] = Levenshtein.distance(s1, s2)
-                    if distance_cache[cache_key] <= LEN_LEVENSHTEIN:
+                    if close_enough(idx1, idx2):
                         union(idx1, idx2)
                         processed.add(pair)
-        
-        # Обрабатываем соседние группы длин
-        for dl in (-3, -2, -1, 1, 2, 3):
+
+        # Compare with neighboring lengths (±1)
+        for dl in (-1, 1):
             neighbor_l = l + dl
             if neighbor_l not in length_groups:
                 continue
             neighbor_group = length_groups[neighbor_l]
-            # Группируем соседнюю группу по префиксам
             neighbor_prefix_map = defaultdict(list)
             for idx in neighbor_group:
                 neighbor_prefix_map[prefixes[idx]].append(idx)
-            
-            # Сравниваем текущие префиксы с соседними
+
             for prefix in current_prefix_map:
                 if prefix not in neighbor_prefix_map:
                     continue
                 current_indices = current_prefix_map[prefix]
                 neighbor_indices = neighbor_prefix_map[prefix]
                 for idx1 in current_indices:
-                    s1 = words[idx1]
-                    len1 = lengths[idx1]
                     for idx2 in neighbor_indices:
-                        # Проверяем порядок индексов для избежания дубликатов
                         if idx1 >= idx2:
-                            continue
-                        s2 = words[idx2]
-                        len2 = lengths[idx2]
-                        if abs(len1 - len2) > LEN_LEVENSHTEIN:
                             continue
                         pair = tuple(sorted((idx1, idx2)))
                         if pair in processed:
                             continue
-                        cache_key = tuple(sorted((s1, s2)))
-                        if cache_key not in distance_cache:
-                            distance_cache[cache_key] = Levenshtein.distance(s1, s2)
-                        if distance_cache[cache_key] <= LEN_LEVENSHTEIN:
+                        if close_enough(idx1, idx2):
                             union(idx1, idx2)
                             processed.add(pair)
-    
+
     return parent, rank
-
-
 def main(rootdir, start_num):
     # тут мы просто делаем все имена книг чистыми без мусора(пробегается только по /pdf/)
     rename_files_in_directory(rootdir)

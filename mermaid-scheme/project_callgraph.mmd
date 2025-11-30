@@ -1,0 +1,124 @@
+flowchart TD
+  subgraph "database_aggregation"
+    direction TB
+    database_aggregation_create_intersection_table["create_intersection_table(db_name, result_table)<br/>Создает таблицу пересечения слов из всех таблиц БД."]
+    database_aggregation_create_union_table["create_union_table(db_name, result_table)<br/>Создает таблицу объединения всех слов из таблиц БД."]
+  end
+  subgraph "database_operations"
+    direction TB
+    database_operations_create_intersection_table_query["create_intersection_table_query(tables, db_path, result_table)<br/>Выполняет создание таблицы пересечения в указанной БД."]
+    database_operations_create_processed_books_table["create_processed_books_table(db_name)"]
+    database_operations_create_table["create_table(db_name, table_name)"]
+    database_operations_create_translations_table["create_translations_table(cursor, table_name)<br/>Создает таблицу для хранения переводов слов."]
+    database_operations_create_union_table_query["create_union_table_query(tables, db_path, result_table, translation_threshold)<br/>Выполняет создание таблицы объединения в указанной БД."]
+    database_operations_get_cached_translations["get_cached_translations(words, use_global_cache)<br/>Получает кэшированные переводы из централизованного кэша."]
+    database_operations_get_global_translations_cache_path["get_global_translations_cache_path()<br/>Возвращает путь к централизованной БД кэша переводов."]
+    database_operations_get_word_with_translation["get_word_with_translation(cursor, word, union_table)<br/>Возвращает слово и перевод из union_table + translations (если есть)."]
+    database_operations_init_global_translations_cache["init_global_translations_cache()<br/>Инициализирует централизованную БД кэша переводов."]
+    database_operations_insert_many_into_table["insert_many_into_table(db_name, table_name, data)"]
+    database_operations_is_book_processed["is_book_processed(db_name, book_path)<br/>Return True if the book_path is already marked as processed."]
+    database_operations_mark_book_as_processed["mark_book_as_processed(db_name, book_path, word_count)<br/>Record completion of a book with its word_count."]
+    database_operations_pick_popular_words["pick_popular_words(data, coverage_ratio, min_ratio, max_ratio, min_count)"]
+    database_operations_save_to_global_translations_cache["save_to_global_translations_cache(translations)<br/>Сохраняет переводы в централизованный кэш в ОБА направления."]
+    database_operations_select_from_table["select_from_table(db_name, request)"]
+  end
+  subgraph "detect_lang"
+    direction TB
+    detect_lang_detect_main_language["detect_main_language(file_path, num_samples, sample_size, model_path)"]
+  end
+  subgraph "file_processing"
+    direction TB
+    file_processing_get_all_folders["get_all_folders(structure, current_path)"]
+    file_processing_get_directory_structure["get_directory_structure(rootdir)"]
+    file_processing_pdf_to_txt["pdf_to_txt(root, name_file)"]
+    file_processing_rename_files_in_directory["rename_files_in_directory(directory)"]
+  end
+  subgraph "lemmatize"
+    direction TB
+    lemmatize_get_lemma["get_lemma(word)"]
+    lemmatize_init_spacy["init_spacy()"]
+    lemmatize_lemmatize_en_paragraph["lemmatize_en_paragraph(paragraph)"]
+    lemmatize_lemmatize_ru_paragraph["lemmatize_ru_paragraph(paragraph)"]
+    lemmatize_parallel_lemmatize_mp["parallel_lemmatize_mp(text, lang, max_workers)"]
+    lemmatize_split_into_paragraphs["split_into_paragraphs(text)"]
+  end
+  subgraph "main"
+    direction TB
+    main_algo_DSU["algo_DSU(sorted_analysand, length_groups)"]
+    main_algo_cleaner["algo_cleaner(sorted_analysand)<br/>Group similar words conservatively and sum frequencies."]
+    main_close_enough["close_enough(i, j)"]
+    main_find["find(u)"]
+    main_find_dsu["find_dsu(u)"]
+    main_initialize_all_databases["initialize_all_databases()<br/>Initialize processed_books tables for every category found under book/txt."]
+    main_is_similar["is_similar(main_word, other_word)"]
+    main_main["main(rootdir, start_num)"]
+    main_normalize_category["normalize_category(name)"]
+    main_print_all_files_from_rootdir["print_all_files_from_rootdir()"]
+    main_reqursion["reqursion(all_files_from_rootdir, start_num)"]
+    main_union["union(u, v)"]
+  end
+  subgraph "text_analysis"
+    direction TB
+    text_analysis_analysand_func_dict["analysand_func_dict(name_file)"]
+    text_analysis_fix_hyphenated_words["fix_hyphenated_words(text)<br/>Объединяет слова, разделенные переносом на разные строки."]
+    text_analysis_get_txt_file["get_txt_file(name_file)"]
+    text_analysis_merge_words["merge_words(match)"]
+    text_analysis_removing_anomaly["removing_anomaly(text_from_book, lang)"]
+  end
+  subgraph "translation_utils"
+    direction TB
+    translation_utils_detect_language["detect_language(word)<br/>Определяет язык: если есть кириллица — русский, иначе английский."]
+    translation_utils_send_batch["send_batch(texts, target_lang, indices)"]
+    translation_utils_translate_batch["translate_batch(words, batch_size)<br/>Переводит список слов пакетно, группируя по направлению перевода (ru→en, en→ru)."]
+  end
+  database_aggregation_create_intersection_table --> database_operations_create_intersection_table_query
+  database_aggregation_create_union_table --> database_operations_create_union_table_query
+  database_operations_insert_many_into_table --> database_operations_create_table
+  database_operations_create_union_table_query --> database_operations_create_translations_table
+  database_operations_create_union_table_query --> database_operations_get_cached_translations
+  database_operations_create_union_table_query --> database_operations_pick_popular_words
+  database_operations_create_union_table_query --> database_operations_save_to_global_translations_cache
+  database_operations_create_union_table_query --> translation_utils_translate_batch
+  database_operations_init_global_translations_cache --> database_operations_get_global_translations_cache_path
+  database_operations_get_cached_translations --> database_operations_get_global_translations_cache_path
+  database_operations_get_cached_translations --> database_operations_init_global_translations_cache
+  database_operations_save_to_global_translations_cache --> database_operations_get_global_translations_cache_path
+  database_operations_save_to_global_translations_cache --> database_operations_init_global_translations_cache
+  database_operations_is_book_processed --> database_operations_create_processed_books_table
+  database_operations_mark_book_as_processed --> database_operations_create_processed_books_table
+  file_processing_get_directory_structure --> file_processing_get_directory_structure
+  file_processing_get_all_folders --> file_processing_get_all_folders
+  lemmatize_lemmatize_ru_paragraph --> lemmatize_get_lemma
+  lemmatize_parallel_lemmatize_mp --> lemmatize_split_into_paragraphs
+  main_initialize_all_databases --> database_operations_create_processed_books_table
+  main_initialize_all_databases --> main_normalize_category
+  main_print_all_files_from_rootdir --> file_processing_get_all_folders
+  main_print_all_files_from_rootdir --> file_processing_get_directory_structure
+  main_reqursion --> database_aggregation_create_intersection_table
+  main_reqursion --> database_aggregation_create_union_table
+  main_reqursion --> database_operations_insert_many_into_table
+  main_reqursion --> database_operations_is_book_processed
+  main_reqursion --> database_operations_mark_book_as_processed
+  main_reqursion --> database_operations_select_from_table
+  main_reqursion --> main_algo_cleaner
+  main_reqursion --> main_reqursion
+  main_reqursion --> text_analysis_analysand_func_dict
+  main_algo_cleaner --> main_algo_DSU
+  main_algo_cleaner --> main_find_dsu
+  main_algo_cleaner --> main_is_similar
+  main_algo_DSU --> main_close_enough
+  main_algo_DSU --> main_union
+  main_union --> main_find
+  main_main --> file_processing_pdf_to_txt
+  main_main --> file_processing_rename_files_in_directory
+  main_main --> main_print_all_files_from_rootdir
+  main_main --> main_reqursion
+  text_analysis_removing_anomaly --> lemmatize_parallel_lemmatize_mp
+  text_analysis_get_txt_file --> text_analysis_fix_hyphenated_words
+  text_analysis_get_txt_file --> text_analysis_removing_anomaly
+  text_analysis_analysand_func_dict --> text_analysis_get_txt_file
+  translation_utils_translate_batch --> translation_utils_detect_language
+  translation_utils_translate_batch --> translation_utils_send_batch
+  %% Legend
+  note1["function(args)<br/>first doc line"]:::legend
+  classDef legend fill:#fef3c7,stroke:#facc15,color:#1f2937;
